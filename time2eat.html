@@ -224,15 +224,15 @@ const Detect = ({ navigate }) => {
   const ht  = (dh, dm = 0) => (dh + dm / 60) * HH;
 
   const events = [
-    { label:'Microeconomics Lecture', time:'09:00 - 11:00', sh:9,  sm:0,  eh:11, em:0  },
-    { label:'Organizational Meeting', time:'13:00 - 15:00', sh:13, sm:0,  eh:15, em:0  },
-    { label:'Research Methods',       time:'15:30 - 17:00', sh:15, sm:30, eh:17, em:0  },
+    { label:'Microeconomics Lecture', time:'09:00 · 11:00', sh:9,  sm:0,  eh:11, em:0  },
+    { label:'Organizational Meeting', time:'13:00 · 15:00', sh:13, sm:0,  eh:15, em:0  },
+    { label:'Research Methods',       time:'15:30 · 17:00', sh:15, sm:30, eh:17, em:0  },
   ];
 
   const scheduledMeals = [
-    { label:'Breakfast', time:'07:00 - 07:30', sh:7,  sm:0, eh:7,  em:30 },
-    { label:'Lunch',     time:'11:00 - 11:30', sh:11, sm:0, eh:11, em:30 },
-    { label:'Dinner',    time:'17:00 - 17:45', sh:17, sm:0, eh:17, em:45 },
+    { label:'Breakfast', time:'07:00 · 07:30', sh:7,  sm:0, eh:7,  em:30 },
+    { label:'Lunch',     time:'11:00 · 11:30', sh:11, sm:0, eh:11, em:30 },
+    { label:'Dinner',    time:'17:00 · 17:45', sh:17, sm:0, eh:17, em:45 },
   ];
 
   const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
@@ -433,7 +433,7 @@ const Schedule = ({ navigate }) => {
                   </div>
                   <div style={{ fontSize:24, fontWeight:700, color:C.text,
                     letterSpacing:-.5, lineHeight:1.1 }}>
-                    {m.start} – {m.end}
+                    {m.start} · {m.end}
                   </div>
                   <div style={{ fontSize:12, color:C.sec, marginTop:5 }}>Today</div>
                 </div>
@@ -549,10 +549,10 @@ const Remind = ({ navigate }) => (
 
       <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:5,
         lineHeight:1.3 }}>
-        Your lunch window starts now
+        Lunch window starts now
       </div>
       <div style={{ fontSize:13, color:C.sec, marginBottom:15, lineHeight:1.5 }}>
-        Your meeting just ended — time to eat 🍽️
+        Your meeting just ended, time to eat
       </div>
 
       <div style={{ display:'flex', gap:8 }}>
@@ -639,11 +639,14 @@ const Track = ({ navigate }) => {
         }}>
           <Logo size={26}/>
           <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.72)', lineHeight:1.3 }}>
+              Time 2 Eat!
+            </div>
             <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
-              Time 2 Eat! — Lunch window starts now
+              Lunch window starts now
             </div>
             <div style={{ fontSize:10, color:'rgba(255,255,255,0.72)', marginTop:2 }}>
-              Your meeting just ended — time to eat
+              Your meeting just ended, time to eat
             </div>
           </div>
           <div style={{ display:'flex', gap:6, flexShrink:0 }}>
@@ -823,7 +826,7 @@ const Track = ({ navigate }) => {
               <div style={{ background:'rgba(255,140,0,0.07)', borderRadius:8,
                 padding:'10px 12px', borderLeft:`3px solid ${C.primary}` }}>
                 <div style={{ fontSize:12, fontWeight:600, color:C.primary, marginBottom:2 }}>
-                  Wed &amp; Fri: lock lunch to 11:00 – 11:30
+                  Wed &amp; Fri: lock lunch to 11:00 · 11:30
                 </div>
                 <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
                   Both slightly-off days follow heavy class blocks. Securing
@@ -1275,9 +1278,9 @@ const Home = ({ navigate }) => {
   const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
 
   const meals = [
-    { type:'Breakfast', time:'07:00 — 07:30', base:'completed' },
-    { type:'Lunch',     time:'12:30 — 13:00', base:'missed'    }, // window has closed
-    { type:'Dinner',    time:'18:30 — 19:00', base:'scheduled' },
+    { type:'Breakfast', time:'07:00 · 07:30', base:'completed' },
+    { type:'Lunch',     time:'12:30 · 13:00', base:'missed'    }, // window has closed
+    { type:'Dinner',    time:'18:30 · 19:00', base:'scheduled' },
   ];
 
   const badgeCfg = s => ({
@@ -1659,9 +1662,9 @@ const Settings = ({ navigate }) => {
         {/* ── Meal Preferences ── */}
         <SectionLabel title="Meal Preferences"/>
         <Card>
-          <Row icon="clock" label="Breakfast" value="6:00 – 10:00 AM"   onClick={() => {}}/>
-          <Row icon="clock" label="Lunch"     value="11:00 AM – 2:00 PM" onClick={() => {}}/>
-          <Row icon="clock" label="Dinner"    value="5:00 – 8:00 PM"   onClick={() => {}}/>
+          <Row icon="clock" label="Breakfast" value="6:00 · 10:00 AM"   onClick={() => {}}/>
+          <Row icon="clock" label="Lunch"     value="11:00 AM · 2:00 PM" onClick={() => {}}/>
+          <Row icon="clock" label="Dinner"    value="5:00 · 8:00 PM"   onClick={() => {}}/>
           <Row icon="settings" label="Window Duration" value="30 min"
             sub="Preferred eating time"
             onClick={() => {}} last/>
