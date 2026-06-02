@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Time 2 Eat! — Prototype v2</title>
+<title>Time 2 Eat! Prototype v2</title>
 <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -278,7 +278,7 @@ const Detect = ({ navigate }) => {
           <Logo size={24}/>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
-              Packed day — we've got you covered
+              Packed day: we've got you covered
             </div>
             <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:3, lineHeight:1.4 }}>
               We squeezed lunch into a 15-min gap and kept dinner after 19:00. Tap "Set manually" if you'd like to adjust.
@@ -393,10 +393,10 @@ const Detect = ({ navigate }) => {
           <div style={{ background:'rgba(240,165,0,0.07)', borderRadius:16, padding:'14px 16px',
             boxShadow:'0 2px 8px rgba(0,0,0,0.07)', border:`1px solid rgba(240,165,0,0.25)` }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#B87A00', marginBottom:4 }}>
-              Packed day — we found tight windows
+              Packed day: we found tight windows
             </div>
             <div style={{ fontSize:11, color:C.sec, marginBottom:12, lineHeight:1.5 }}>
-              Lunch is squeezed into 11:00–11:15 between classes. It's short, but better than skipping. Dinner is free after 19:00.
+              Lunch is squeezed into 11:00 · 11:15 between classes. Short, but better than skipping. Dinner is free after 19:00.
             </div>
             <button onClick={() => navigate('schedule')}
               style={{ width:'100%', height:38, borderRadius:10, border:`1.5px solid rgba(240,165,0,0.4)`,
@@ -907,7 +907,7 @@ const Track = ({ navigate }) => {
                 padding:'10px 12px', marginBottom:8,
                 borderLeft:`3px solid ${C.success}` }}>
                 <div style={{ fontSize:12, fontWeight:600, color:C.success, marginBottom:2 }}>
-                  Strong Mon &amp; Tue — keep the momentum.
+                  Strong Mon &amp; Tue: keep the momentum.
                 </div>
                 <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
                   Two consecutive on-track days is how lasting habits form.
@@ -1013,10 +1013,10 @@ const Track = ({ navigate }) => {
                 padding:'10px 12px', marginBottom:8,
                 borderLeft:`3px solid ${C.success}` }}>
                 <div style={{ fontSize:12, fontWeight:600, color:C.success, marginBottom:2 }}>
-                  Weekday routine is strong — 85% on track.
+                  Weekday routine is strong, 85% on track.
                 </div>
                 <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
-                  Mon &amp; Tue are your best days — perfect record all month.
+                  Mon &amp; Tue are your best days, perfect record all month.
                   That's the anchor your habit needs.
                 </div>
               </div>
@@ -1027,7 +1027,7 @@ const Track = ({ navigate }) => {
                 </div>
                 <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
                   All 4 Saturdays were either skipped or slightly off. Set a
-                  simpler, fixed weekend window — even one meal at a consistent
+                  simpler, fixed weekend window. Even one meal at a consistent
                   time will break the pattern.
                 </div>
               </div>
@@ -1235,7 +1235,7 @@ const Onboard = ({ onComplete }) => {
         </svg>
       }
       title="Calendar Access"
-      description="We'll scan your free time to find the perfect meal windows — without touching your events."
+      description="We'll scan your free time to find the perfect meal windows, without touching your events."
       items={[
         {
           icon: <IconBadge color="#1A73E8">
