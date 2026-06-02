@@ -252,9 +252,11 @@ const Detect = ({ navigate }) => {
     { label:'Dinner',    time:'17:00 · 17:45', sh:17, sm:0, eh:17, em:45 },
   ];
 
-  // Only breakfast fits before the packed day starts
+  // Tight windows squeezed into the packed day
   const packedMeals = [
-    { label:'Breakfast', time:'07:00 · 07:30', sh:7, sm:0, eh:7, em:30 },
+    { label:'Breakfast', time:'07:00 · 07:30', sh:7,  sm:0,  eh:7,  em:30, tight:false },
+    { label:'Lunch',     time:'11:00 · 11:15', sh:11, sm:0,  eh:11, em:15, tight:true  },
+    { label:'Dinner',    time:'19:00 · 19:30', sh:19, sm:0,  eh:19, em:30, tight:false },
   ];
 
   const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
@@ -276,10 +278,10 @@ const Detect = ({ navigate }) => {
           <Logo size={24}/>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
-              Your schedule is packed today
+              Packed day — we've got you covered
             </div>
             <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:3, lineHeight:1.4 }}>
-              We couldn't find slots for lunch or dinner. Please set them manually — eating on time matters!
+              We squeezed lunch into a 15-min gap and kept dinner after 19:00. Tap "Set manually" if you'd like to adjust.
             </div>
           </div>
           <div onClick={() => setNotify(false)}
@@ -358,15 +360,25 @@ const Detect = ({ navigate }) => {
               position:'absolute', zIndex:3,
               top: top(meal.sh, meal.sm), left:42, right:0,
               height: Math.max(ht(meal.eh - meal.sh, meal.em - meal.sm), 36),
-              border:`1.5px dashed ${C.primary}`, borderRadius:10,
-              background:'rgba(255,140,0,0.07)',
+              border: meal.tight ? `1.5px dashed #F0A500` : `1.5px dashed ${C.primary}`,
+              borderRadius:10,
+              background: meal.tight ? 'rgba(240,165,0,0.08)' : 'rgba(255,140,0,0.07)',
               padding:'7px 10px', overflow:'hidden',
               display:'flex', flexDirection:'column', justifyContent:'center',
             }}>
-              <div style={{ fontSize:12, fontWeight:700, color:C.primary, lineHeight:1.2 }}>
-                {meal.label}
+              <div style={{ display:'flex', alignItems:'center', gap:4 }}>
+                <div style={{ fontSize:12, fontWeight:700,
+                  color: meal.tight ? '#F0A500' : C.primary, lineHeight:1.2 }}>
+                  {meal.label}
+                </div>
+                {meal.tight && (
+                  <span style={{ fontSize:9, fontWeight:700, color:'#F0A500',
+                    background:'rgba(240,165,0,0.15)', borderRadius:6,
+                    padding:'1px 5px' }}>tight</span>
+                )}
               </div>
-              <div style={{ fontSize:11, color:C.primary, opacity:.75, marginTop:2 }}>
+              <div style={{ fontSize:11, color: meal.tight ? '#F0A500' : C.primary,
+                opacity:.75, marginTop:2 }}>
                 {meal.time}
               </div>
             </div>
@@ -378,19 +390,19 @@ const Detect = ({ navigate }) => {
       {/* CTA card */}
       <div style={{ padding:'8px 16px 12px', flexShrink:0 }}>
         {packed ? (
-          <div style={{ background:'rgba(211,47,47,0.06)', borderRadius:16, padding:'14px 16px',
-            boxShadow:'0 2px 8px rgba(0,0,0,0.07)', border:`1px solid rgba(211,47,47,0.15)` }}>
-            <div style={{ fontSize:13, fontWeight:700, color:C.error, marginBottom:4 }}>
-              No free slots found for lunch or dinner
+          <div style={{ background:'rgba(240,165,0,0.07)', borderRadius:16, padding:'14px 16px',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.07)', border:`1px solid rgba(240,165,0,0.25)` }}>
+            <div style={{ fontSize:13, fontWeight:700, color:'#B87A00', marginBottom:4 }}>
+              Packed day — we found tight windows
             </div>
             <div style={{ fontSize:11, color:C.sec, marginBottom:12, lineHeight:1.5 }}>
-              We scheduled breakfast before your day starts. Set lunch and dinner manually?
+              Lunch is squeezed into 11:00–11:15 between classes. It's short, but better than skipping. Dinner is free after 19:00.
             </div>
             <button onClick={() => navigate('schedule')}
-              style={{ width:'100%', height:38, borderRadius:10, border:'none',
-              background:C.primary, color:'white',
+              style={{ width:'100%', height:38, borderRadius:10, border:`1.5px solid rgba(240,165,0,0.4)`,
+              background:'transparent', color:'#B87A00',
               fontSize:12, fontWeight:600, cursor:'pointer' }}>
-              Set Manually
+              Not happy with this? Set manually
             </button>
           </div>
         ) : (
