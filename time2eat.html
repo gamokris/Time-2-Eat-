@@ -219,6 +219,7 @@ const Logo = ({ size = 28 }) => (
 const Detect = ({ navigate }) => {
   const HH = 48;
   const S  = 7;
+  const [packed, setPacked] = useState(false);
 
   const top = (h, m = 0) => (h - S + m / 60) * HH;
   const ht  = (dh, dm = 0) => (dh + dm / 60) * HH;
@@ -229,13 +230,29 @@ const Detect = ({ navigate }) => {
     { label:'Research Methods',       time:'15:30 · 17:00', sh:15, sm:30, eh:17, em:0  },
   ];
 
+  const packedEvents = [
+    { label:'Morning Lecture',        time:'07:30 · 09:00', sh:7,  sm:30, eh:9,  em:0  },
+    { label:'Microeconomics Lecture', time:'09:00 · 11:00', sh:9,  sm:0,  eh:11, em:0  },
+    { label:'Study Group',            time:'11:00 · 13:00', sh:11, sm:0,  eh:13, em:0  },
+    { label:'Organizational Meeting', time:'13:00 · 15:00', sh:13, sm:0,  eh:15, em:0  },
+    { label:'Research Methods',       time:'15:00 · 17:00', sh:15, sm:0,  eh:17, em:0  },
+    { label:'Lab Session',            time:'17:00 · 19:00', sh:17, sm:0,  eh:19, em:0  },
+  ];
+
   const scheduledMeals = [
     { label:'Breakfast', time:'07:00 · 07:30', sh:7,  sm:0, eh:7,  em:30 },
     { label:'Lunch',     time:'11:00 · 11:30', sh:11, sm:0, eh:11, em:30 },
     { label:'Dinner',    time:'17:00 · 17:45', sh:17, sm:0, eh:17, em:45 },
   ];
 
+  // Only breakfast fits before the packed day starts
+  const packedMeals = [
+    { label:'Breakfast', time:'07:00 · 07:30', sh:7, sm:0, eh:7, em:30 },
+  ];
+
   const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
+  const activeEvents = packed ? packedEvents : events;
+  const activeMeals  = packed ? packedMeals  : scheduledMeals;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1, background:C.bg, overflow:'hidden' }}>
@@ -248,7 +265,20 @@ const Detect = ({ navigate }) => {
           <Logo size={30}/>
           <span style={{ fontSize:17, fontWeight:700, color:C.text }}>Time 2 Eat!</span>
         </div>
-        <Ic n="settings" size={20} color={C.sec}/>
+        {/* Packed day toggle */}
+        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+          <span style={{ fontSize:10, fontWeight:600, color: packed ? C.error : C.sec }}>
+            Packed day
+          </span>
+          <div onClick={() => setPacked(!packed)} style={{ cursor:'pointer',
+            width:36, height:20, borderRadius:10,
+            background: packed ? C.error : '#DDDDDD',
+            position:'relative', transition:'background .2s', flexShrink:0 }}>
+            <div style={{ width:16, height:16, borderRadius:8, background:'white',
+              position:'absolute', top:2, left: packed ? 18 : 2,
+              transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,0.2)' }}/>
+          </div>
+        </div>
       </div>
 
       {/* Greeting */}
@@ -256,8 +286,8 @@ const Detect = ({ navigate }) => {
         <div style={{ fontSize:20, fontWeight:700, color:C.text, lineHeight:1.2 }}>
           Good morning, Clarissa
         </div>
-        <div style={{ fontSize:13, color:C.sec, marginTop:4 }}>
-          Here are your meals for today
+        <div style={{ fontSize:13, color: packed ? C.error : C.sec, marginTop:4 }}>
+          {packed ? 'Your schedule is packed today' : 'Here are your meals for today'}
         </div>
       </div>
 
@@ -278,7 +308,7 @@ const Detect = ({ navigate }) => {
           ))}
 
           {/* Calendar events */}
-          {events.map((ev, i) => (
+          {activeEvents.map((ev, i) => (
             <div key={i} style={{
               position:'absolute', zIndex:2,
               top: top(ev.sh, ev.sm), left:42, right:0,
@@ -292,10 +322,10 @@ const Detect = ({ navigate }) => {
             </div>
           ))}
 
-          {/* Scheduled meals */}
-          {scheduledMeals.map((meal, i) => (
+          {/* Meal windows */}
+          {activeMeals.map((meal, i) => (
             <div key={i} style={{
-              position:'absolute', zIndex:2,
+              position:'absolute', zIndex:3,
               top: top(meal.sh, meal.sm), left:42, right:0,
               height: Math.max(ht(meal.eh - meal.sh, meal.em - meal.sm), 36),
               border:`1.5px dashed ${C.primary}`, borderRadius:10,
@@ -317,24 +347,49 @@ const Detect = ({ navigate }) => {
 
       {/* CTA card */}
       <div style={{ padding:'8px 16px 12px', flexShrink:0 }}>
-        <div style={{ background:C.cardBg, borderRadius:16, padding:'14px 16px',
-          display:'flex', alignItems:'center', justifyContent:'space-between',
-          boxShadow:'0 2px 8px rgba(0,0,0,0.08)', gap:12 }}>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:13, fontWeight:600, color:C.text }}>
-              3 meals scheduled for today
+        {packed ? (
+          <div style={{ background:'rgba(211,47,47,0.06)', borderRadius:16, padding:'14px 16px',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.07)', border:`1px solid rgba(211,47,47,0.15)` }}>
+            <div style={{ fontSize:13, fontWeight:700, color:C.error, marginBottom:4 }}>
+              No free slots found for lunch or dinner
             </div>
-            <div style={{ fontSize:11, color:C.sec, marginTop:3 }}>
-              Want to change a time? Edit your meal windows
+            <div style={{ fontSize:11, color:C.sec, marginBottom:12, lineHeight:1.5 }}>
+              We scheduled breakfast before your day starts. Set lunch and dinner manually?
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => navigate('schedule')}
+                style={{ flex:1, height:38, borderRadius:10, border:'none',
+                background:C.primary, color:'white',
+                fontSize:12, fontWeight:600, cursor:'pointer' }}>
+                Set Manually
+              </button>
+              <button style={{ flex:1, height:38, borderRadius:10,
+                border:`1.5px solid ${C.border}`, background:'transparent',
+                color:C.sec, fontSize:12, fontWeight:500, cursor:'pointer' }}>
+                Skip for Today
+              </button>
             </div>
           </div>
-          <button onClick={() => navigate('schedule')}
-            style={{ background:C.primary, color:'white', border:'none',
-            borderRadius:12, padding:'11px 16px',
-            fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', lineHeight:1 }}>
-            Edit
-          </button>
-        </div>
+        ) : (
+          <div style={{ background:C.cardBg, borderRadius:16, padding:'14px 16px',
+            display:'flex', alignItems:'center', justifyContent:'space-between',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.08)', gap:12 }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:600, color:C.text }}>
+                3 meals scheduled for today
+              </div>
+              <div style={{ fontSize:11, color:C.sec, marginTop:3 }}>
+                Want to change a time? Edit your meal windows
+              </div>
+            </div>
+            <button onClick={() => navigate('schedule')}
+              style={{ background:C.primary, color:'white', border:'none',
+              borderRadius:12, padding:'11px 16px',
+              fontSize:12, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap', lineHeight:1 }}>
+              Edit
+            </button>
+          </div>
+        )}
       </div>
 
       <BottomNav active="schedule" navigate={navigate}/>
