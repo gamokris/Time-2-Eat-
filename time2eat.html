@@ -739,42 +739,39 @@ const Track = ({ navigate }) => {
         <div className="slide-in" style={{
           position:'absolute', top:0, left:0, right:0, zIndex:10,
           background:C.primary, padding:'12px 14px',
+          display:'flex', alignItems:'center', gap:10,
           boxShadow:'0 4px 20px rgba(255,140,0,0.35)',
         }}>
-          {/* Top row: logo + title + buttons */}
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-            <Logo size={26}/>
-            <div style={{ flex:1 }}>
-              <div style={{ fontSize:11, color:'rgba(255,255,255,0.72)', lineHeight:1.3 }}>
-                Time 2 Eat!
-              </div>
-              <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
-                Lunch window starts now
-              </div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,0.72)', marginTop:1 }}>
-                Your meeting just ended, time to eat
-              </div>
+          <Logo size={26}/>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:11, color:'rgba(255,255,255,0.72)', lineHeight:1.3 }}>
+              Time 2 Eat!
             </div>
-            <div style={{ display:'flex', gap:6, flexShrink:0 }}>
-              <button onClick={() => setBanner(false)}
-                style={{ background:'rgba(255,255,255,0.22)', color:'white',
-                border:'none', borderRadius:8, padding:'6px 10px',
-                fontSize:11, fontWeight:600, cursor:'pointer' }}>
-                Eat Now
-              </button>
-              <button onClick={() => setBanner(false)}
-                style={{ background:'transparent', color:'rgba(255,255,255,0.85)',
-                border:'1px solid rgba(255,255,255,0.3)', borderRadius:8,
-                padding:'6px 10px', fontSize:11, fontWeight:500, cursor:'pointer' }}>
-                Later
-              </button>
+            <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
+              Lunch window starts now
+            </div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.72)', marginTop:2 }}>
+              Your meeting just ended, time to eat
+            </div>
+            <div style={{ fontSize:10, color:'rgba(255,255,255,0.9)', marginTop:4,
+              background:'rgba(255,255,255,0.15)', borderRadius:6, padding:'3px 7px',
+              display:'inline-block' }}>
+              ✓ Try light protein · ✕ Skip heavy carbs
             </div>
           </div>
-          {/* Full width nutrition tip */}
-          <div style={{ fontSize:10, color:'rgba(255,255,255,0.85)',
-            background:'rgba(255,255,255,0.13)', borderRadius:6, padding:'5px 10px',
-            textAlign:'justify', lineHeight:1.5 }}>
-            Your digestion slows after your window. Go for something light and easy today.
+          <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+            <button onClick={() => setBanner(false)}
+              style={{ background:'rgba(255,255,255,0.22)', color:'white',
+              border:'none', borderRadius:8, padding:'6px 10px',
+              fontSize:11, fontWeight:600, cursor:'pointer' }}>
+              Eat Now
+            </button>
+            <button onClick={() => setBanner(false)}
+              style={{ background:'transparent', color:'rgba(255,255,255,0.85)',
+              border:'1px solid rgba(255,255,255,0.3)', borderRadius:8,
+              padding:'6px 10px', fontSize:11, fontWeight:500, cursor:'pointer' }}>
+              Later
+            </button>
           </div>
         </div>
       )}
