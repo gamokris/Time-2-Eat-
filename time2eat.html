@@ -22,19 +22,70 @@
   }
   .ns::-webkit-scrollbar { display: none; }
   .ns { -ms-overflow-style: none; scrollbar-width: none; }
-  @keyframes slideDown {
-    from { transform: translateY(-100%); opacity: 0; }
+
+  /* ── Screen transitions ── */
+  @keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  @keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to   { transform: translateX(0);     opacity: 1; }
+  }
+  @keyframes slideInUp {
+    from { transform: translateY(32px); opacity: 0; }
     to   { transform: translateY(0);    opacity: 1; }
   }
-  .slide-in { animation: slideDown 0.35s ease-out forwards; }
-  button { font-family: 'Poppins', sans-serif; }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+  }
+  @keyframes popIn {
+    0%   { transform: scale(0.92); opacity: 0; }
+    60%  { transform: scale(1.04); opacity: 1; }
+    100% { transform: scale(1);    opacity: 1; }
+  }
+  @keyframes navPop {
+    0%   { transform: translateY(0); }
+    40%  { transform: translateY(-5px); }
+    100% { transform: translateY(0); }
+  }
+
+  .screen-slide-right { animation: slideInRight 0.32s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .screen-slide-left  { animation: slideInLeft  0.32s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .screen-fade        { animation: fadeIn       0.28s ease-out forwards; }
+  .slide-in           { animation: slideDown    0.35s ease-out forwards; }
+
+  /* ── Staggered content fade-up ── */
+  .anim-item { animation: slideInUp 0.38s cubic-bezier(0.22,1,0.36,1) both; }
+  .anim-item:nth-child(1) { animation-delay: 0.04s; }
+  .anim-item:nth-child(2) { animation-delay: 0.09s; }
+  .anim-item:nth-child(3) { animation-delay: 0.14s; }
+  .anim-item:nth-child(4) { animation-delay: 0.19s; }
+  .anim-item:nth-child(5) { animation-delay: 0.24s; }
+  .anim-item:nth-child(6) { animation-delay: 0.29s; }
+
+  /* ── Button press feel ── */
+  button { font-family: 'Poppins', sans-serif; transition: transform 0.1s, opacity 0.1s; }
+  button:active { transform: scale(0.96); opacity: 0.85; }
+
+  /* ── Nav icon pop ── */
+  .nav-active { animation: navPop 0.3s cubic-bezier(0.22,1,0.36,1); }
+
+  /* ── Card tap ripple ── */
+  .tappable { transition: transform 0.15s ease, box-shadow 0.15s ease; cursor: pointer; }
+  .tappable:active { transform: scale(0.97); box-shadow: 0 1px 4px rgba(0,0,0,0.08) !important; }
 </style>
 </head>
 <body>
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, Fragment } = React;
+const { useState, useEffect, useRef, Fragment } = React;
 
 /* ─── Design tokens ─── */
 const C = {
@@ -180,10 +231,17 @@ const BottomNav = ({ active, navigate }) => {
         <div key={t.id}
           onClick={() => t.dest && navigate && navigate(t.dest)}
           style={{ display:'flex', flexDirection:'column', alignItems:'center',
-            gap:3, cursor:'pointer', padding:'4px 14px' }}>
-          <Ic n={t.icon} size={22} color={active===t.id ? C.primary : '#C8C8C8'}/>
+            gap:3, cursor:'pointer', padding:'4px 14px',
+            transition:'transform 0.15s', }}
+          onMouseDown={e => e.currentTarget.style.transform='scale(0.92)'}
+          onMouseUp={e   => e.currentTarget.style.transform='scale(1)'}
+          onMouseLeave={e=> e.currentTarget.style.transform='scale(1)'}>
+          <div className={active===t.id ? 'nav-active' : ''}>
+            <Ic n={t.icon} size={22} color={active===t.id ? C.primary : '#C8C8C8'}/>
+          </div>
           <span style={{ fontSize:10, fontWeight:active===t.id?600:400,
-            color:active===t.id?C.primary:'#C8C8C8' }}>{t.label}</span>
+            color:active===t.id?C.primary:'#C8C8C8',
+            transition:'color 0.18s' }}>{t.label}</span>
         </div>
       ))}
     </div>
@@ -1503,7 +1561,7 @@ const Home = ({ navigate }) => {
           const circleColor = isDone ? C.success : isLate2 ? '#F0A500' : isMissed ? C.error : C.border;
 
           return (
-            <div key={i} style={{ marginBottom:10 }}>
+            <div key={i} className="anim-item" style={{ marginBottom:10 }}>
               {/* Main card */}
               <div style={{
                 background: isMissed ? 'white' : C.cardBg,
@@ -1614,6 +1672,7 @@ const Home = ({ navigate }) => {
         </div>
 
         <div onClick={() => navigate('detect')}
+          className="tappable anim-item"
           style={{ background:'white', borderRadius:16, padding:'14px',
           boxShadow:'0 2px 8px rgba(0,0,0,0.06)', marginBottom:12, cursor:'pointer' }}>
 
@@ -1887,11 +1946,28 @@ const SCREENS = [
   { id:'settings',  label:'Settings',     Comp:Settings  },
 ];
 
-const App = () => {
-  const [active, setActive] = useState('onboard');
-  const { Comp } = SCREENS.find(s => s.id === active);
+// Screen order for determining slide direction
+const SCREEN_ORDER = ['onboard','home','detect','schedule','remind','track','settings'];
 
-  const goHome = () => setActive('home');
+const App = () => {
+  const [active, setActive]     = useState('onboard');
+  const [animClass, setAnimClass] = useState('screen-fade');
+  const [key, setKey]           = useState(0);
+  const prevRef                 = useRef('onboard');
+
+  const navigate = (screen) => {
+    const target = screen === 'schedule' ? 'detect' : screen;
+    const prevIdx = SCREEN_ORDER.indexOf(prevRef.current);
+    const nextIdx = SCREEN_ORDER.indexOf(target);
+    const cls = nextIdx >= prevIdx ? 'screen-slide-right' : 'screen-slide-left';
+    prevRef.current = target;
+    setAnimClass(cls);
+    setKey(k => k + 1);
+    setActive(target);
+  };
+
+  const goHome = () => navigate('home');
+  const { Comp } = SCREENS.find(s => s.id === active);
 
   return (
     <Fragment>
@@ -1903,7 +1979,7 @@ const App = () => {
           Screens
         </span>
         {SCREENS.map(s => (
-          <button key={s.id} onClick={() => setActive(s.id === 'schedule' ? 'detect' : s.id)} style={{
+          <button key={s.id} onClick={() => navigate(s.id)} style={{
             padding:'7px 18px', borderRadius:20, border:'none', cursor:'pointer',
             background: active===s.id ? C.primary : '#F0ECE4',
             color:      active===s.id ? 'white'   : '#666',
@@ -1915,11 +1991,14 @@ const App = () => {
         ))}
       </div>
 
-      {/* Phone — every screen receives navigate */}
+      {/* Phone */}
       <Phone>
-        {active === 'onboard'
-          ? <Onboard onComplete={goHome}/>
-          : <Comp navigate={setActive}/>}
+        <div key={key} className={animClass}
+          style={{ display:'flex', flexDirection:'column', flex:1, overflow:'hidden' }}>
+          {active === 'onboard'
+            ? <Onboard onComplete={goHome}/>
+            : <Comp navigate={navigate}/>}
+        </div>
       </Phone>
     </Fragment>
   );
