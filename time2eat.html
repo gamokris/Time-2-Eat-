@@ -920,9 +920,9 @@ const Track = ({ navigate }) => {
             {/* ── Weekly insight (swipeable) ── */}
             {(() => {
               const weekInsights = [
-                { stat:'2 late lunches', sub:'Try light protein when eating past 13:00. Heavy carbs slow your afternoon down.', accent:C.primary, bg:'rgba(255,140,0,0.07)' },
-                { stat:'5 days on track', sub:'Two strong days in a row builds lasting habit. Keep Mon and Tue locked in.', accent:C.success, bg:'rgba(46,125,50,0.07)' },
-                { stat:'Lunch is your weak spot', sub:'Lock lunch right after your morning class to avoid afternoon schedule clashes.', accent:'#B87A00', bg:'rgba(240,165,0,0.07)' },
+                { stat:'Wed and Fri lunches ran late', sub:'Both days your morning class block pushed lunch past 13:00. A packed bag snack right after class buys you time without skipping.', accent:C.primary, bg:'rgba(255,140,0,0.07)' },
+                { stat:'Breakfast: 5 days straight', sub:'You have never missed a morning this week. That early window before your 09:00 class is clearly your most reliable slot. Protect it.', accent:C.success, bg:'rgba(46,125,50,0.07)' },
+                { stat:'Thursday was your hardest day', sub:'No meals were logged at all. If that happens again, even a small meal between Research Methods and your next commitment counts.', accent:'#B87A00', bg:'rgba(240,165,0,0.07)' },
               ];
               const [wi, setWi] = React.useState(0);
               const ins = weekInsights[wi];
@@ -1039,9 +1039,9 @@ const Track = ({ navigate }) => {
             {/* ── Monthly insight (swipeable) ── */}
             {(() => {
               const monthInsights = [
-                { stat:'21 days on track', sub:'Consistent meal timing improves insulin sensitivity. Your weekday routine is already working for your body.', accent:C.success, bg:'rgba(46,125,50,0.07)' },
-                { stat:'6 late meals this month', sub:'On late days, skip heavy carbs and fried food. Light protein and vegetables keep digestion on track.', accent:'#B87A00', bg:'rgba(240,165,0,0.07)' },
-                { stat:'Saturdays need a plan', sub:'All 4 Saturdays were off track. A protein breakfast before 10:00 anchors your metabolism on unstructured days.', accent:C.primary, bg:'rgba(255,140,0,0.07)' },
+                { stat:'21 on track days in May', sub:'Mon and Tue were perfect all month. Those two days are carrying your streak. Whatever you eat on those mornings, it is working.', accent:C.success, bg:'rgba(46,125,50,0.07)' },
+                { stat:'All 4 Saturdays were off', sub:'Saturday has no class structure, so meals drift. Try setting a fixed Saturday breakfast at the same time as your weekday one. One anchor changes the whole day.', accent:C.error, bg:'rgba(211,47,47,0.06)' },
+                { stat:'6 slightly off days after 13:00', sub:'On every one of those days, lunch slipped past your window because of afternoon meetings. Moving lunch to right after your morning block would have saved all 6.', accent:'#B87A00', bg:'rgba(240,165,0,0.07)' },
               ];
               const [mi, setMi] = React.useState(0);
               const ins = monthInsights[mi];
