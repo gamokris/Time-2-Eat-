@@ -1853,6 +1853,179 @@ const Settings = ({ navigate }) => {
   );
 };
 
+/* ════════════════════════════════════════
+   HIDDEN — NUTRITION TAB (prototype only)
+   ════════════════════════════════════════ */
+const Nutrition = ({ navigate }) => {
+  const sections = [
+    {
+      meal: 'Breakfast',
+      icon: '🌅',
+      window: '07:00 · 09:00',
+      color: '#F0A500',
+      bg: 'rgba(240,165,0,0.08)',
+      border: 'rgba(240,165,0,0.2)',
+      eat: [
+        'Eggs or Greek yogurt for sustained energy',
+        'Whole grain toast with avocado',
+        'Fresh fruit for natural sugars',
+        'Water or herbal tea to rehydrate',
+      ],
+      avoid: [
+        'Sugary cereals and pastries',
+        'Sweetened juice or energy drinks',
+        'Heavy fried food on an empty stomach',
+      ],
+      tip: 'Cortisol peaks in the morning. A protein-rich breakfast stabilises blood sugar and keeps you focused through the day.',
+    },
+    {
+      meal: 'Lunch',
+      icon: '☀️',
+      window: '12:00 · 14:00',
+      color: C.primary,
+      bg: 'rgba(255,140,0,0.07)',
+      border: 'rgba(255,140,0,0.2)',
+      eat: [
+        'Lean protein: chicken, fish, or legumes',
+        'Complex carbs like brown rice or quinoa',
+        'Leafy greens and colourful vegetables',
+        'A small portion of healthy fats',
+      ],
+      avoid: [
+        'Heavy cream-based sauces',
+        'Oversized portions that cause afternoon fatigue',
+        'Sugary desserts right after eating',
+      ],
+      tip: 'Midday is your best window for a balanced, larger meal. Digestion is at its peak and your body uses nutrients most efficiently.',
+    },
+    {
+      meal: 'Dinner',
+      icon: '🌙',
+      window: '18:00 · 20:00',
+      color: '#1565C0',
+      bg: 'rgba(21,101,192,0.07)',
+      border: 'rgba(21,101,192,0.2)',
+      eat: [
+        'Light protein: fish, tofu, or eggs',
+        'Steamed or roasted vegetables',
+        'Soups or broth-based dishes',
+        'Chamomile or herbal tea after eating',
+      ],
+      avoid: [
+        'High carb meals close to bedtime',
+        'Caffeine after 18:00',
+        'Alcohol on an empty stomach',
+        'Large portions that disrupt sleep',
+      ],
+      tip: 'Insulin sensitivity drops in the evening. A lighter, earlier dinner supports better sleep quality and overnight recovery.',
+    },
+  ];
+
+  const [open, setOpen] = useState(0);
+
+  return (
+    <div style={{ display:'flex', flexDirection:'column', flex:1, background:C.bg, overflow:'hidden' }}>
+      <StatusBar/>
+
+      <div style={{ padding:'2px 20px 14px', flexShrink:0 }}>
+        <div style={{ fontSize:20, fontWeight:700, color:C.text }}>Nutrition Guide</div>
+        <div style={{ fontSize:13, color:C.sec, marginTop:3 }}>
+          What to eat at each meal window
+        </div>
+      </div>
+
+      <div className="ns" style={{ flex:1, overflowY:'auto', padding:'0 20px 20px' }}>
+
+        {/* Source note */}
+        <div style={{ background:'rgba(46,125,50,0.07)', borderRadius:12, padding:'10px 14px',
+          marginBottom:16, display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:16 }}>📚</span>
+          <div style={{ fontSize:11, color:'#2E7D32', lineHeight:1.5 }}>
+            Based on chrononutrition research, the science of how meal timing affects metabolism and energy.
+          </div>
+        </div>
+
+        {sections.map((s, i) => (
+          <div key={i} style={{ marginBottom:12, borderRadius:16, overflow:'hidden',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.07)',
+            border:`1px solid ${s.border}` }}>
+
+            {/* Header — tap to expand */}
+            <div onClick={() => setOpen(open === i ? -1 : i)}
+              style={{ background: s.bg, padding:'14px 16px',
+              display:'flex', alignItems:'center', gap:12, cursor:'pointer' }}>
+              <span style={{ fontSize:24 }}>{s.icon}</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:15, fontWeight:700, color:s.color }}>{s.meal}</div>
+                <div style={{ fontSize:11, color:C.sec, marginTop:2 }}>Best window · {s.window}</div>
+              </div>
+              <span style={{ fontSize:18, color:s.color, fontWeight:300,
+                transform: open===i ? 'rotate(180deg)' : 'none',
+                transition:'transform .2s', display:'block' }}>⌄</span>
+            </div>
+
+            {/* Expanded content */}
+            {open === i && (
+              <div style={{ background:'white', padding:'14px 16px' }}>
+
+                {/* Science tip */}
+                <div style={{ background:s.bg, borderRadius:10, padding:'10px 12px', marginBottom:14 }}>
+                  <div style={{ fontSize:11, color:s.color, lineHeight:1.6 }}>{s.tip}</div>
+                </div>
+
+                {/* Eat */}
+                <div style={{ marginBottom:12 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:'#2E7D32',
+                    textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>
+                    ✓ Eat
+                  </div>
+                  {s.eat.map((item, j) => (
+                    <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:8,
+                      marginBottom:6 }}>
+                      <div style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+                        background:'#2E7D32', marginTop:5 }}/>
+                      <div style={{ fontSize:12, color:'#333', lineHeight:1.5 }}>{item}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Avoid */}
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.error,
+                    textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>
+                    ✕ Avoid
+                  </div>
+                  {s.avoid.map((item, j) => (
+                    <div key={j} style={{ display:'flex', alignItems:'flex-start', gap:8,
+                      marginBottom:6 }}>
+                      <div style={{ width:6, height:6, borderRadius:'50%', flexShrink:0,
+                        background:C.error, marginTop:5 }}/>
+                      <div style={{ fontSize:12, color:'#666', lineHeight:1.5 }}>{item}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Late eating note */}
+        <div style={{ background:'rgba(211,47,47,0.06)', borderRadius:16, padding:'14px 16px',
+          border:'1px solid rgba(211,47,47,0.15)' }}>
+          <div style={{ fontSize:13, fontWeight:700, color:C.error, marginBottom:6 }}>
+            Eating late?
+          </div>
+          <div style={{ fontSize:12, color:'#555', lineHeight:1.6 }}>
+            If you miss your window, keep portions smaller, choose lighter foods, and avoid carbs and sugar. Your body's ability to process food drops significantly after your ideal window.
+          </div>
+        </div>
+
+      </div>
+      <BottomNav active="settings" navigate={navigate}/>
+    </div>
+  );
+};
+
 /* ─── Phone frame ─── */
 const Phone = ({ children }) => (
   <div style={{
@@ -1867,13 +2040,14 @@ const Phone = ({ children }) => (
 
 /* ─── Root ─── */
 const SCREENS = [
-  { id:'onboard',  label:'0 · Onboard',  Comp:Onboard  },
-  { id:'home',     label:'Home',          Comp:Home     },
-  { id:'detect',   label:'1 · Detect',   Comp:Detect   },
-  { id:'schedule', label:'2 · Schedule', Comp:Schedule },
-  { id:'remind',   label:'3 · Remind',   Comp:Remind   },
-  { id:'track',    label:'4 · Track',    Comp:Track    },
-  { id:'settings', label:'Settings',     Comp:Settings },
+  { id:'onboard',   label:'0 · Onboard',  Comp:Onboard   },
+  { id:'home',      label:'Home',          Comp:Home      },
+  { id:'detect',    label:'1 · Detect',   Comp:Detect    },
+  { id:'schedule',  label:'2 · Schedule', Comp:Schedule  },
+  { id:'remind',    label:'3 · Remind',   Comp:Remind    },
+  { id:'track',     label:'4 · Track',    Comp:Track     },
+  { id:'settings',  label:'Settings',     Comp:Settings  },
+  { id:'nutrition', label:'⚗ Nutrition',  Comp:Nutrition, hidden:true },
 ];
 
 const App = () => {
@@ -1893,9 +2067,10 @@ const App = () => {
         </span>
         {SCREENS.map(s => (
           <button key={s.id} onClick={() => setActive(s.id === 'schedule' ? 'detect' : s.id)} style={{
-            padding:'7px 18px', borderRadius:20, border:'none', cursor:'pointer',
-            background: active===s.id ? C.primary : '#F0ECE4',
-            color:      active===s.id ? 'white'   : '#666',
+            padding:'7px 18px', borderRadius:20, cursor:'pointer',
+            background: active===s.id ? C.primary : s.hidden ? 'transparent' : '#F0ECE4',
+            color:      active===s.id ? 'white'   : s.hidden ? '#AAAAAA' : '#666',
+            border: s.hidden ? '1.5px dashed #CCCCCC' : 'none',
             fontSize:12, fontWeight: active===s.id ? 600 : 500,
             transition:'all .18s',
           }}>
