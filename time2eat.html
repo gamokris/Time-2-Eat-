@@ -917,60 +917,46 @@ const Track = ({ navigate }) => {
               </div>
             </div>
 
-            {/* ── Weekly tip ── */}
-            <div style={{ background:C.cardBg, borderRadius:16, padding:'16px',
-              border:'1px solid rgba(255,140,0,0.15)', marginBottom:16 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:10 }}>
-                This week's tip
-              </div>
-              <div style={{ background:'rgba(46,125,50,0.08)', borderRadius:8,
-                padding:'10px 12px', marginBottom:8,
-                borderLeft:`3px solid ${C.success}` }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.success, marginBottom:2 }}>
-                  Strong Mon &amp; Tue: keep the momentum.
+            {/* ── Weekly insight (swipeable) ── */}
+            {(() => {
+              const weekInsights = [
+                { stat:'2 late lunches', sub:'Try light protein when eating past 13:00. Heavy carbs slow your afternoon down.', accent:C.primary, bg:'rgba(255,140,0,0.07)' },
+                { stat:'5 days on track', sub:'Two strong days in a row builds lasting habit. Keep Mon and Tue locked in.', accent:C.success, bg:'rgba(46,125,50,0.07)' },
+                { stat:'Lunch is your weak spot', sub:'Lock lunch right after your morning class to avoid afternoon schedule clashes.', accent:'#B87A00', bg:'rgba(240,165,0,0.07)' },
+              ];
+              const [wi, setWi] = React.useState(0);
+              const ins = weekInsights[wi];
+              return (
+                <div style={{ background:ins.bg, borderRadius:16, padding:'18px 18px 14px',
+                  marginBottom:10, border:`1px solid rgba(0,0,0,0.06)` }}>
+                  <div style={{ fontSize:10, fontWeight:600, color:ins.accent,
+                    textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>
+                    This week
+                  </div>
+                  <div style={{ fontSize:22, fontWeight:800, color:ins.accent,
+                    lineHeight:1.1, marginBottom:6 }}>
+                    {ins.stat}
+                  </div>
+                  <div style={{ fontSize:12, color:'#555', lineHeight:1.6, marginBottom:14 }}>
+                    {ins.sub}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div style={{ display:'flex', gap:5 }}>
+                      {weekInsights.map((_,i) => (
+                        <div key={i} onClick={() => setWi(i)} style={{ cursor:'pointer',
+                          width: wi===i ? 18 : 6, height:6, borderRadius:3,
+                          background: wi===i ? ins.accent : 'rgba(0,0,0,0.15)',
+                          transition:'all .2s' }}/>
+                      ))}
+                    </div>
+                    <div onClick={() => setWi((wi+1) % weekInsights.length)}
+                      style={{ fontSize:11, fontWeight:600, color:ins.accent, cursor:'pointer' }}>
+                      Next insight
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
-                  Two consecutive on-track days is how lasting habits form.
-                </div>
-              </div>
-              <div style={{ background:'rgba(255,140,0,0.07)', borderRadius:8,
-                padding:'10px 12px', borderLeft:`3px solid ${C.primary}` }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.primary, marginBottom:2 }}>
-                  Wed &amp; Fri: lock lunch to 11:00 · 11:30
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
-                  Both slightly-off days follow heavy class blocks. Securing
-                  lunch right after your morning session prevents afternoon clashes.
-                </div>
-              </div>
-            </div>
-
-            {/* ── Nutrition insight (week) ── */}
-            <div style={{ background:'white', borderRadius:16, padding:'16px',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.06)', marginBottom:10,
-              border:`1px solid ${C.border}` }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:12 }}>
-                Nutrition insight this week
-              </div>
-              <div style={{ background:'rgba(240,165,0,0.08)', borderRadius:10,
-                padding:'11px 13px', marginBottom:8 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'#B87A00', marginBottom:3 }}>
-                  2 late lunches this week
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.6 }}>
-                  Late afternoon eating slows digestion. Try light protein like chicken or eggs and skip heavy carbs when lunch runs past 13:00.
-                </div>
-              </div>
-              <div style={{ background:'rgba(46,125,50,0.07)', borderRadius:10,
-                padding:'11px 13px' }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.success, marginBottom:3 }}>
-                  Breakfast is your strongest habit
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.6 }}>
-                  Consistent morning meals boost cortisol regulation. Keep it up and pair breakfast with protein to sustain focus through your morning classes.
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </Fragment>
         ) : (
           <Fragment>
@@ -1050,71 +1036,46 @@ const Track = ({ navigate }) => {
               </div>
             </div>
 
-            {/* ── Monthly insight ── */}
-            <div style={{ background:C.cardBg, borderRadius:16, padding:'16px',
-              border:'1px solid rgba(255,140,0,0.15)', marginBottom:16 }}>
-              <div style={{ fontSize:12, fontWeight:700, color:C.text, marginBottom:10 }}>
-                Monthly insight
-              </div>
-              <div style={{ background:'rgba(46,125,50,0.08)', borderRadius:8,
-                padding:'10px 12px', marginBottom:8,
-                borderLeft:`3px solid ${C.success}` }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.success, marginBottom:2 }}>
-                  Weekday routine is strong, 85% on track.
+            {/* ── Monthly insight (swipeable) ── */}
+            {(() => {
+              const monthInsights = [
+                { stat:'21 days on track', sub:'Consistent meal timing improves insulin sensitivity. Your weekday routine is already working for your body.', accent:C.success, bg:'rgba(46,125,50,0.07)' },
+                { stat:'6 late meals this month', sub:'On late days, skip heavy carbs and fried food. Light protein and vegetables keep digestion on track.', accent:'#B87A00', bg:'rgba(240,165,0,0.07)' },
+                { stat:'Saturdays need a plan', sub:'All 4 Saturdays were off track. A protein breakfast before 10:00 anchors your metabolism on unstructured days.', accent:C.primary, bg:'rgba(255,140,0,0.07)' },
+              ];
+              const [mi, setMi] = React.useState(0);
+              const ins = monthInsights[mi];
+              return (
+                <div style={{ background:ins.bg, borderRadius:16, padding:'18px 18px 14px',
+                  marginBottom:10, border:`1px solid rgba(0,0,0,0.06)` }}>
+                  <div style={{ fontSize:10, fontWeight:600, color:ins.accent,
+                    textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:8 }}>
+                    This month
+                  </div>
+                  <div style={{ fontSize:22, fontWeight:800, color:ins.accent,
+                    lineHeight:1.1, marginBottom:6 }}>
+                    {ins.stat}
+                  </div>
+                  <div style={{ fontSize:12, color:'#555', lineHeight:1.6, marginBottom:14 }}>
+                    {ins.sub}
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div style={{ display:'flex', gap:5 }}>
+                      {monthInsights.map((_,i) => (
+                        <div key={i} onClick={() => setMi(i)} style={{ cursor:'pointer',
+                          width: mi===i ? 18 : 6, height:6, borderRadius:3,
+                          background: mi===i ? ins.accent : 'rgba(0,0,0,0.15)',
+                          transition:'all .2s' }}/>
+                      ))}
+                    </div>
+                    <div onClick={() => setMi((mi+1) % monthInsights.length)}
+                      style={{ fontSize:11, fontWeight:600, color:ins.accent, cursor:'pointer' }}>
+                      Next insight
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
-                  Mon &amp; Tue are your best days, perfect record all month.
-                  That's the anchor your habit needs.
-                </div>
-              </div>
-              <div style={{ background:'rgba(255,140,0,0.07)', borderRadius:8,
-                padding:'10px 12px', borderLeft:`3px solid ${C.primary}` }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.primary, marginBottom:2 }}>
-                  Saturdays need a plan
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.5 }}>
-                  All 4 Saturdays were either skipped or slightly off. Set a
-                  simpler, fixed weekend window. Even one meal at a consistent
-                  time will break the pattern.
-                </div>
-              </div>
-            </div>
-
-            {/* ── Nutrition insight (month) ── */}
-            <div style={{ background:'white', borderRadius:16, padding:'16px',
-              boxShadow:'0 2px 8px rgba(0,0,0,0.06)', marginBottom:10,
-              border:`1px solid ${C.border}` }}>
-              <div style={{ fontSize:13, fontWeight:700, color:C.text, marginBottom:12 }}>
-                Nutrition insight this month
-              </div>
-              <div style={{ background:'rgba(211,47,47,0.06)', borderRadius:10,
-                padding:'11px 13px', marginBottom:8 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.error, marginBottom:3 }}>
-                  6 slightly off days linked to late eating
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.6 }}>
-                  On days you ate past your window, digestion and energy were likely impacted. Avoid heavy carbs and fried food when eating late. Opt for lean protein and vegetables instead.
-                </div>
-              </div>
-              <div style={{ background:'rgba(46,125,50,0.07)', borderRadius:10,
-                padding:'11px 13px', marginBottom:8 }}>
-                <div style={{ fontSize:12, fontWeight:600, color:C.success, marginBottom:3 }}>
-                  21 on track days — strong foundation
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.6 }}>
-                  Eating consistently at the right time improves insulin sensitivity and energy levels. Your weekday routine is already working for your body.
-                </div>
-              </div>
-              <div style={{ background:'rgba(255,140,0,0.07)', borderRadius:10,
-                padding:'11px 13px' }}>
-                <div style={{ fontSize:12, fontWeight:600, color:'#B87A00', marginBottom:3 }}>
-                  Weekend tip
-                </div>
-                <div style={{ fontSize:11, color:'#555', lineHeight:1.6 }}>
-                  On skipped or late weekend days, prioritise a high protein breakfast before 10:00. It anchors your metabolism even when the rest of the day is unstructured.
-                </div>
-              </div>
-            </div>
+              );
+            })()}
           </Fragment>
         )}
 
