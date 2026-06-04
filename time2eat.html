@@ -421,7 +421,7 @@ const Detect = ({ navigate }) => {
       {/* iOS notification popup — Tomorrow packed day */}
       {notify && (
         <div className="slide-in" style={{
-          position:'absolute', top:8, left:10, right:10, zIndex:10,
+          position:'absolute', top:60, left:10, right:10, zIndex:10,
           background:'rgba(255,255,255,0.92)',
           backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
           borderRadius:16, padding:'10px 12px',
@@ -842,7 +842,7 @@ const Remind = ({ navigate }) => {
 /* ════════════════════════════════════════
    SCREEN 4 — TRACK
    ════════════════════════════════════════ */
-const Track = ({ navigate, mealDone, mealLate }) => {
+const Track = ({ navigate, mealDone, mealLate, mealSkipped }) => {
   /* Status logic:
      G    = checked on time on home page             → On track
      Y    = tapped "I ate, just late" on home page   → Slightly off
@@ -861,18 +861,23 @@ const Track = ({ navigate, mealDone, mealLate }) => {
     { date:22, status:'G'   }, { date:23, status:'G'   }, { date:24, status:'R'   },
     { date:25, status:'G'   }, { date:26, status:'G'   }, { date:27, status:'G'   },
     { date:28, status:'Y'   }, { date:29, status:'R'   }, // auto-assumed (no home check)
-    { date:30, status:'Y', today:true }, { date:31, status:null },
+    { date:30, status:todayStatus, today:true }, { date:31, status:null },
   ];
 
   const MONTH_COLOR = { G:C.success, Y:'#F0A500', R:C.error, null:'#EEEEEE' };
 
   // G=21, Y=6, R=3 (incl. Thu auto), null=1 → 21/30 = 70% on track
 
-  /* Compute today's (30) status from shared meal state */
-  const d = mealDone || {}, l = mealLate || {};
+  /* Compute today's (30) status from shared meal state
+     Green only when ALL 3 meals are logged done with none late/skipped */
+  const d = mealDone || {}, l = mealLate || {}, sk = mealSkipped || {};
   const anyLate    = Object.values(l).some(Boolean);
-  const anyDone    = Object.values(d).some(Boolean);
-  const todayStatus = anyDone && !anyLate ? 'G' : anyLate ? 'Y' : 'R';
+  const anySkipped = Object.values(sk).some(Boolean);
+  const allDone    = d[0] && d[1] && d[2];
+  const todayStatus = anySkipped ? 'R'
+    : anyLate    ? 'Y'
+    : allDone    ? 'G'
+    : null; // day still in progress, show grey until all meals logged
 
   // ── This week ──
   const week = [
@@ -900,7 +905,7 @@ const Track = ({ navigate, mealDone, mealLate }) => {
       {/* ── In-app notification banner — iOS banner style ── */}
       {banner && (
         <div className="slide-in" style={{
-          position:'absolute', top:8, left:10, right:10, zIndex:10,
+          position:'absolute', top:60, left:10, right:10, zIndex:10,
           background:'rgba(255,255,255,0.92)',
           backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
           borderRadius:16,
@@ -1543,12 +1548,32 @@ const Onboard = ({ onComplete }) => {
   );
 };
 
-/* ─── Shared meal windows ─── */
+/* ─── Shared meal windows + preference ranges ─── */
 const MEAL_WINDOWS = [
-  { type:'Breakfast', sh:7,  sm:0,  eh:7,  em:30, time:'07:00 · 07:30' },
-  { type:'Lunch',     sh:12, sm:30, eh:13, em:0,  time:'12:30 · 13:00' },
-  { type:'Dinner',    sh:18, sm:30, eh:19, em:0,  time:'18:30 · 19:00' },
+  { type:'Breakfast', sh:7,  sm:0,  eh:7,  em:30, time:'07:00 · 07:30', ph:6,  pm:0,  peh:10, pem:0  },
+  { type:'Lunch',     sh:12, sm:30, eh:13, em:0,  time:'12:30 · 13:00', ph:11, pm:0,  peh:14, pem:0  },
+  { type:'Dinner',    sh:18, sm:30, eh:19, em:0,  time:'18:30 · 19:00', ph:17, pm:0,  peh:20, pem:0  },
 ];
+
+/*
+  Meal phases based on time:
+  scheduled  — before window opens
+  open       — first half of window (no tip, just checkmark)
+  open-tip   — second half of window (tip shows, still checkmark)
+  pref       — window passed, still within meal preference (tip + checkmark, no buttons)
+  overdue    — past entire preference window (I ate late / I skipped buttons, no tip)
+*/
+function getMealPhase(m, nowMin) {
+  const start   = m.sh * 60 + m.sm;
+  const end     = m.eh * 60 + m.em;
+  const mid     = Math.floor((start + end) / 2);
+  const prefEnd = m.peh * 60 + m.pem;
+  if (nowMin < start) return 'scheduled';
+  if (nowMin < mid)   return 'open';
+  if (nowMin < end)   return 'open-tip';
+  if (nowMin < prefEnd) return 'pref';
+  return 'overdue';
+}
 
 /* Returns the current or next upcoming meal based on WIB time */
 function getCurrentMeal() {
@@ -1566,7 +1591,7 @@ function getCurrentMeal() {
    HOME DASHBOARD
    ════════════════════════════════════════ */
 
-const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
+const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate, mealSkipped, setMealSkipped }) => {
   /* Live WIB clock + countdown */
   const wib = useWIBTime();
   const [secs, setSecs] = useState(0);
@@ -1577,9 +1602,9 @@ const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
       const w = getWIBDate();
       const nowMin = w.getHours() * 60 + w.getMinutes();
 
-      /* Find the next meal that hasn't started yet */
+      /* Find the next meal that hasn't started yet (countdown target) */
       let idx = MEAL_WINDOWS.findIndex(m => (m.sh * 60 + m.sm) > nowMin);
-      if (idx === -1) idx = 0; // past all meals → tomorrow's breakfast
+      if (idx === -1) idx = 0; // past all → tomorrow's breakfast
       setNextMealIdx(idx);
 
       /* Countdown to that meal's start (or 0 if window is already open) */
@@ -1601,35 +1626,34 @@ const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
   const cdS = pad(secs % 60);
 
   /* Meal logging state:
-     done[i]      = checked on time (home page tick) → G
-     late[i]      = tapped "I ate, just late"        → Y
-     (neither)    = missed window → auto-assumed R   */
+     done[i]    = checked during open window       → On track (G)
+     late[i]    = tapped "I ate late" after window → Slightly off (Y)
+     skipped[i] = tapped "I skipped" after window  → Skipped (R, confirmed)
+     (neither)  = window closed, no action yet     → shows recovery buttons */
   const done = mealDone, setDone = setMealDone;
   const late = mealLate, setLate = setMealLate;
+  const skipped = mealSkipped, setSkipped = setMealSkipped;
   const toggle = i => setDone(p => ({ ...p, [i]: !p[i] }));
 
   /* Dynamic greeting based on WIB hour */
   const greeting = wib.h < 12 ? 'Good morning' : wib.h < 17 ? 'Good afternoon' : 'Good evening';
 
-  /* Dynamic meal statuses based on WIB time */
+  /* Dynamic meal statuses based on WIB time + phase */
   const nowMin = wib.h * 60 + wib.m;
   const meals = MEAL_WINDOWS.map(m => {
-    const startMin = m.sh * 60 + m.sm;
-    const endMin   = m.eh * 60 + m.em;
-    let base;
-    if (nowMin < startMin)     base = 'scheduled'; // not started yet
-    else if (nowMin <= endMin) base = 'open';       // window is open — user decides
-    else                       base = 'missed';     // window has passed
-    return { type: m.type, time: m.time, base };
+    const phase = getMealPhase(m, nowMin);
+    return { type:m.type, time:m.time, base:phase };
   });
 
   const badgeCfg = s => ({
-    completed: { bg:'rgba(46,125,50,0.09)',  color:'#2E7D32',  label:'On track'     },
+    completed: { bg:'rgba(46,125,50,0.09)',  color:'#2E7D32',  label:'On track'      },
     late:      { bg:'rgba(240,165,0,0.12)', color:'#F0A500',  label:'Slightly off'  },
-    missed:    { bg:'rgba(211,47,47,0.08)', color:C.error,    label:'Missed'        },
+    overdue:   { bg:'rgba(211,47,47,0.08)', color:C.error,    label:'Missed'        },
+    skipped:   { bg:'rgba(211,47,47,0.08)', color:C.error,    label:'Skipped'       },
     open:      { bg:'rgba(255,140,0,0.11)', color:C.primary,  label:'Window open'   },
-    upcoming:  { bg:'rgba(255,140,0,0.11)', color:C.primary,  label:'Upcoming'      },
-    scheduled: { bg:'#F3F3F3',             color:'#999999',   label:'Scheduled'    },
+    'open-tip':{ bg:'rgba(255,140,0,0.11)', color:C.primary,  label:'Window open'   },
+    pref:      { bg:'rgba(255,140,0,0.11)', color:C.primary,  label:'Eat soon'      },
+    scheduled: { bg:'#F3F3F3',             color:'#999999',   label:'Scheduled'     },
   }[s]);
 
   /* ── Mini timeline (07:00 – 17:00, 20 px / hr) ── */
@@ -1709,38 +1733,63 @@ const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
         {meals.map((meal, i) => {
           const isDone    = !!done[i];
           const isLate2   = !!late[i];
-          const isMissed  = meal.base === 'missed' && !isDone && !isLate2;
-          const isOpen    = meal.base === 'open' && !isDone && !isLate2;
-          const status    = isDone ? 'completed' : isLate2 ? 'late' : meal.base;
-          const { bg, color, label } = badgeCfg(status);
+          const isSkipped = !!skipped[i];
+          const phase     = meal.base; // 'scheduled'|'open'|'open-tip'|'pref'|'overdue'
+          const logged    = isDone || isLate2 || isSkipped;
 
-          // Icon inside the circle button
-          const circleIcon = isDone
-            ? <polyline points="3 10 8 15 17 5"/>
-            : isLate2
-              ? <Fragment><line x1="4" y1="10" x2="16" y2="10"/><polyline points="10 4 10 16"/></Fragment>
-              : isMissed
-                ? <Fragment><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></Fragment>
-                : <polyline points="3 10 8 15 17 5"/>;
+          /* What's shown */
+          const showTip      = !logged && (phase === 'open-tip' || phase === 'pref');
+          const showButtons  = !logged && phase === 'overdue';
+          const showCircle   = !showButtons && phase !== 'scheduled';
+          const hasExpansion = showTip || showButtons;
 
-          const circleColor = isDone ? C.success : isLate2 ? '#F0A500' : isMissed ? C.error : C.border;
+          /* Determine display status */
+          const status = isDone ? 'completed'
+            : isLate2   ? 'late'
+            : isSkipped ? 'skipped'
+            : phase;
+          const { bg, color, label } = badgeCfg(status) || badgeCfg('scheduled');
+
+          /* Circle logic */
+          const circleColor = isDone ? C.success : isLate2 ? '#F0A500' : showButtons ? C.error : C.border;
+          const circleIcon  = isSkipped
+            ? <Fragment><line x1="5" y1="5" x2="15" y2="15"/><line x1="15" y1="5" x2="5" y2="15"/></Fragment>
+            : <polyline points="3 10 8 15 17 5"/>;
+
+          /* Circle tap logic — all states are undoable */
+          const onCircleTap = () => {
+            if (isSkipped) setSkipped(p => ({ ...p, [i]: false })); // undo skip → back to recovery
+            else if (isLate2) setLate(p => ({ ...p, [i]: false })); // undo late → back to recovery
+            else if (phase === 'pref') setLate(p => ({ ...p, [i]: true })); // mark late in pref
+            else toggle(i);                                          // toggle done on/off
+          };
+
+          /* Border colour for the expansion wrapper */
+          const expansionBorderColor = (showButtons || isSkipped) ? 'rgba(211,47,47,0.15)'
+            : isLate2 ? 'rgba(240,165,0,0.25)'
+            : 'rgba(255,140,0,0.2)';
 
           return (
             <div key={i} className="anim-item" style={{ marginBottom:10 }}>
+              {/* Outer wrapper handles the border so we never mix border + borderBottom */}
+              <div style={{
+                borderRadius: 14, overflow:'hidden',
+                boxShadow:'0 1px 6px rgba(0,0,0,0.06)',
+                border: hasExpansion ? `1px solid ${expansionBorderColor}` : 'none',
+              }}>
               {/* Main card */}
               <div style={{
-                background: isMissed ? 'white' : C.cardBg,
-                borderRadius: (isMissed || isOpen) ? '14px 14px 0 0' : 14,
+                background: (showButtons || isSkipped) ? 'white' : C.cardBg,
                 padding:'13px 14px', display:'flex', alignItems:'center', gap:12,
-                boxShadow:'0 1px 6px rgba(0,0,0,0.06)',
-                border: isMissed ? `1px solid rgba(211,47,47,0.15)` : isOpen ? `1px solid rgba(255,140,0,0.2)` : 'none',
-                borderBottom: (isMissed || isOpen) ? 'none' : undefined,
               }}>
                 {/* Meal icon */}
                 <div style={{ width:40, height:40, borderRadius:11, flexShrink:0,
-                  background: isMissed ? 'rgba(211,47,47,0.07)' : isDone ? 'rgba(46,125,50,0.10)' : 'rgba(255,140,0,0.10)',
+                  background: (showButtons || isSkipped) ? 'rgba(211,47,47,0.07)'
+                    : isDone ? 'rgba(46,125,50,0.10)' : 'rgba(255,140,0,0.10)',
                   display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <Ic n="clock" size={19} color={isMissed ? C.error : isDone ? C.success : C.primary}/>
+                  <Ic n="clock" size={19} color={
+                    (showButtons || isSkipped) ? C.error : isDone ? C.success : C.primary
+                  }/>
                 </div>
 
                 <div style={{ flex:1 }}>
@@ -1754,19 +1803,18 @@ const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
                   {label}
                 </span>
 
-                {/* Circle indicator / check button */}
-                {meal.base !== 'scheduled' && (
-                  <div onClick={() => !isMissed && toggle(i)} style={{
+                {/* Circle — shown when window or pref phase, or logged */}
+                {showCircle && (
+                  <div onClick={onCircleTap} style={{
                     width:30, height:30, borderRadius:'50%', flexShrink:0,
                     border:`1.5px solid ${circleColor}`,
-                    background: isDone ? C.success : isLate2 ? '#F0A500'
-                              : isMissed ? 'rgba(211,47,47,0.08)' : 'transparent',
-                    cursor: isMissed ? 'default' : 'pointer',
+                    background: isDone ? C.success : isLate2 ? '#F0A500' : isSkipped ? C.error : 'transparent',
+                    cursor: 'pointer',
                     display:'flex', alignItems:'center', justifyContent:'center',
                     transition:'all .18s',
                   }}>
                     <svg width="12" height="12" viewBox="0 0 20 20" fill="none"
-                      stroke={isDone||isLate2 ? 'white' : isMissed ? C.error : '#CCCCCC'}
+                      stroke={isDone || isLate2 || isSkipped ? 'white' : '#CCCCCC'}
                       strokeWidth="2.5" strokeLinecap="round">
                       {circleIcon}
                     </svg>
@@ -1774,78 +1822,49 @@ const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
                 )}
               </div>
 
-              {/* Two-option row — only for missed meals not yet resolved */}
-              {isMissed && (
+              {/* Meal tip: second half of window or within pref range */}
+              {showTip && (() => {
+                const tips = {
+                  Breakfast: { food:'Eggs, Greek yogurt, or oats keep your energy steady', avoid:'Sugary cereals and juice' },
+                  Lunch:     { food:'Light protein with vegetables keeps you focused',      avoid:'Heavy carbs and fried food' },
+                  Dinner:    { food:'Lean protein and vegetables are easy on digestion',    avoid:'High carbs, sugar, or caffeine' },
+                };
+                const t = tips[meal.type] || tips.Lunch;
+                return (
+                  <div style={{ background:'rgba(255,140,0,0.06)', padding:'11px 14px 13px' }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:C.primary,
+                      textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:5 }}>
+                      Meal tip
+                    </div>
+                    <div style={{ fontSize:11, color:'#444', lineHeight:1.6, marginBottom:3 }}>{t.food}</div>
+                    <div style={{ fontSize:11, color:'#999', lineHeight:1.6 }}>Avoid: {t.avoid}</div>
+                  </div>
+                );
+              })()}
+
+              {/* Recovery buttons: only past the entire preference window */}
+              {showButtons && (
                 <div style={{ display:'flex', gap:8, padding:'10px 14px 12px',
                   background:'white', borderRadius:'0 0 14px 14px',
-                  border:'1px solid rgba(211,47,47,0.15)', borderTop:'none',
+                  
                   boxShadow:'0 2px 6px rgba(0,0,0,0.05)' }}>
                   <button onClick={() => setLate(p=>({...p,[i]:true}))} style={{
                     flex:1, padding:'9px 0', borderRadius:9, border:'none',
                     background:'rgba(240,165,0,0.13)', color:'#C07800',
                     fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                    I ate, just late
+                    I ate late
                   </button>
-                  <button onClick={() => toggle(i)} style={{
+                  <button onClick={() => setSkipped(p=>({...p,[i]:true}))} style={{
                     flex:1, padding:'9px 0', borderRadius:9, border:'none',
-                    background:'rgba(46,125,50,0.10)', color:C.success,
+                    background:'rgba(211,47,47,0.08)', color:C.error,
                     fontSize:11, fontWeight:700, cursor:'pointer' }}>
-                    I ate on time ✓
+                    I skipped
                   </button>
                 </div>
               )}
 
-              {/* Meal tip — shown while window is open and not yet logged */}
-              {isOpen && (() => {
-                const tips = {
-                  Breakfast: { food:'Eggs, Greek yogurt, or oats give you steady energy', avoid:'Skip sugary cereals and juice — they spike and crash fast', color:C.primary, bg:'rgba(255,140,0,0.06)' },
-                  Lunch:     { food:'Light protein like chicken or tofu with vegetables', avoid:'Avoid heavy carbs and fried food — digestion slows after', color:C.primary, bg:'rgba(255,140,0,0.06)' },
-                  Dinner:    { food:'Lean protein and veggies — easy on the stomach before bed', avoid:'Avoid high carbs, sugar, and caffeine this late', color:'#1565C0', bg:'rgba(21,101,192,0.06)' },
-                };
-                const t = tips[meal.type] || tips.Lunch;
-                return (
-                  <div style={{ background:t.bg, borderRadius:'0 0 14px 14px',
-                    padding:'11px 14px 13px',
-                    border:`1px solid rgba(255,140,0,0.2)`, borderTop:'none' }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:t.color,
-                      textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:5 }}>
-                      {meal.type} tip
-                    </div>
-                    <div style={{ fontSize:11, color:'#444', lineHeight:1.6, marginBottom:3 }}>
-                      ✓ {t.food}
-                    </div>
-                    <div style={{ fontSize:11, color:'#888', lineHeight:1.6 }}>
-                      ✕ {t.avoid}
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Nutrition tip — shown after "I ate, just late" */}
-              {isLate2 && (() => {
-                const tips = {
-                  Breakfast: { food:'Go for eggs or Greek yogurt', avoid:'Avoid sugary cereals and juice, your cortisol is still elevated', color:'#B87A00', bg:'rgba(240,165,0,0.07)' },
-                  Lunch:     { food:'Choose a light protein like chicken or tofu with vegetables', avoid:'Avoid heavy carbs and fried food, digestion slows in the afternoon', color:'#B87A00', bg:'rgba(240,165,0,0.07)' },
-                  Dinner:    { food:'Lean protein and vegetables are ideal', avoid:'Avoid high carbs, sugar, and caffeine this late in the day', color:'#1565C0', bg:'rgba(21,101,192,0.07)' },
-                };
-                const t = tips[meal.type] || tips.Lunch;
-                return (
-                  <div style={{ background:t.bg, borderRadius:'0 0 14px 14px',
-                    padding:'12px 14px 14px',
-                    border:`1px solid rgba(0,0,0,0.06)`, borderTop:'none' }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:t.color,
-                      textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:6 }}>
-                      Nutrition tip for late {meal.type.toLowerCase()}
-                    </div>
-                    <div style={{ fontSize:11, color:'#444', lineHeight:1.6, marginBottom:4 }}>
-                      ✓ {t.food}
-                    </div>
-                    <div style={{ fontSize:11, color:'#888', lineHeight:1.6 }}>
-                      ✕ {t.avoid}
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* After pressing a recovery button: just the clean badge, nothing more */}
+              </div>{/* end outer border wrapper */}
             </div>
           );
         })}
@@ -2245,15 +2264,53 @@ const Settings = ({ navigate }) => {
 
 
 
-/* ─── Phone frame ─── */
+/* ─── iPhone 15 Black frame ─── */
 const Phone = ({ children }) => (
   <div style={{
-    width:375, height:812, background:'white',
-    borderRadius:44, overflow:'hidden', flexShrink:0,
-    boxShadow:'0 0 0 8px #1C1C1C, 0 0 0 11px #3A3A3A, 0 32px 80px rgba(0,0,0,0.22)',
+    position:'relative', flexShrink:0,
+    width:393, height:852,
+    /* Outer titanium-black bezel */
+    borderRadius:52,
+    background:'linear-gradient(160deg,#2a2a2a 0%,#111 50%,#1e1e1e 100%)',
+    boxShadow:[
+      '0 0 0 1.5px #4a4a4a',          /* thin highlight rim */
+      'inset 0 0 0 1px #000',           /* inner shadow */
+      '0 40px 100px rgba(0,0,0,0.55)',  /* drop shadow */
+      '0 8px 24px rgba(0,0,0,0.4)',
+    ].join(','),
+    padding:10,
     display:'flex', flexDirection:'column',
   }}>
-    {children}
+    {/* Screen area */}
+    <div style={{
+      flex:1, borderRadius:44, overflow:'hidden',
+      background:'white', position:'relative',
+      display:'flex', flexDirection:'column',
+    }}>
+      {children}
+
+      {/* Dynamic Island */}
+      <div style={{
+        position:'absolute', top:10, left:'50%',
+        transform:'translateX(-50%)',
+        width:120, height:34,
+        background:'#000', borderRadius:20,
+        zIndex:9999,
+        boxShadow:'0 0 0 2px #111',
+      }}/>
+    </div>
+
+    {/* Side buttons — volume up/down (left) */}
+    <div style={{ position:'absolute', left:-3, top:120, width:3, height:34,
+      background:'#2a2a2a', borderRadius:'2px 0 0 2px' }}/>
+    <div style={{ position:'absolute', left:-3, top:164, width:3, height:34,
+      background:'#2a2a2a', borderRadius:'2px 0 0 2px' }}/>
+    {/* Silent switch (left) */}
+    <div style={{ position:'absolute', left:-3, top:80, width:3, height:28,
+      background:'#2a2a2a', borderRadius:'2px 0 0 2px' }}/>
+    {/* Power button (right) */}
+    <div style={{ position:'absolute', right:-3, top:120, width:3, height:60,
+      background:'#2a2a2a', borderRadius:'0 2px 2px 0' }}/>
   </div>
 );
 
@@ -2278,8 +2335,9 @@ const App = () => {
   const prevRef                 = useRef('onboard');
 
   /* Shared meal logging state — lifted so Home + Track stay in sync */
-  const [mealDone, setMealDone] = useState({ 0: true });
-  const [mealLate, setMealLate] = useState({});
+  const [mealDone,    setMealDone   ] = useState({ 0: true });
+  const [mealLate,    setMealLate   ] = useState({});
+  const [mealSkipped, setMealSkipped] = useState({});
 
   const navigate = (screen) => {
     const prev = prevRef.current;
@@ -2323,7 +2381,7 @@ const App = () => {
           style={{ display:'flex', flexDirection:'column', flex:1, overflow:'hidden' }}>
           {active === 'onboard'
             ? <Onboard onComplete={goHome}/>
-            : <Comp navigate={navigate} mealDone={mealDone} setMealDone={setMealDone} mealLate={mealLate} setMealLate={setMealLate}/>}
+            : <Comp navigate={navigate} mealDone={mealDone} setMealDone={setMealDone} mealLate={mealLate} setMealLate={setMealLate} mealSkipped={mealSkipped} setMealSkipped={setMealSkipped}/>}
         </div>
       </Phone>
     </Fragment>
