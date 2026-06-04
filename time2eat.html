@@ -760,9 +760,9 @@ const Remind = ({ navigate }) => {
         letterSpacing:-4, lineHeight:1 }}>
         {wibShort}
       </div>
-      <div style={{ fontSize:15, color: dateColor,
-        marginTop:10, fontWeight:400, transition:'color 0.4s' }}>
-        {wibFull}
+      <div style={{ fontSize:15, color:'rgba(255,255,255,0.52)',
+        marginTop:10, fontWeight:400 }}>
+        Friday, 30 May
       </div>
     </div>
 
@@ -842,7 +842,7 @@ const Remind = ({ navigate }) => {
 /* ════════════════════════════════════════
    SCREEN 4 — TRACK
    ════════════════════════════════════════ */
-const Track = ({ navigate }) => {
+const Track = ({ navigate, mealDone, mealLate }) => {
   /* Status logic:
      G    = checked on time on home page             → On track
      Y    = tapped "I ate, just late" on home page   → Slightly off
@@ -868,13 +868,19 @@ const Track = ({ navigate }) => {
 
   // G=21, Y=6, R=3 (incl. Thu auto), null=1 → 21/30 = 70% on track
 
+  /* Compute today's (30) status from shared meal state */
+  const d = mealDone || {}, l = mealLate || {};
+  const anyLate    = Object.values(l).some(Boolean);
+  const anyDone    = Object.values(d).some(Boolean);
+  const todayStatus = anyDone && !anyLate ? 'G' : anyLate ? 'Y' : 'R';
+
   // ── This week ──
   const week = [
     { day:'Mon', date:26, status:'G'   },
     { day:'Tue', date:27, status:'G'   },
     { day:'Wed', date:28, status:'Y'   },
     { day:'Thu', date:29, status:'R'   }, // auto-assumed skipped — no home check logged
-    { day:'Fri', date:30, status:'Y', today:true },
+    { day:'Fri', date:30, status: todayStatus, today:true },
     { day:'Sat', date:31, status: null },
     { day:'Sun', date:1,  status: null },
   ];
@@ -1558,7 +1564,7 @@ function getCurrentMeal() {
    HOME DASHBOARD
    ════════════════════════════════════════ */
 
-const Home = ({ navigate }) => {
+const Home = ({ navigate, mealDone, setMealDone, mealLate, setMealLate }) => {
   /* Live WIB clock + countdown */
   const wib = useWIBTime();
   const [secs, setSecs] = useState(0);
@@ -1596,8 +1602,8 @@ const Home = ({ navigate }) => {
      done[i]      = checked on time (home page tick) → G
      late[i]      = tapped "I ate, just late"        → Y
      (neither)    = missed window → auto-assumed R   */
-  const [done, setDone]     = useState({ 0: true }); // Breakfast pre-checked
-  const [late, setLate]     = useState({});
+  const done = mealDone, setDone = setMealDone;
+  const late = mealLate, setLate = setMealLate;
   const toggle = i => setDone(p => ({ ...p, [i]: !p[i] }));
 
   /* Dynamic greeting based on WIB hour */
@@ -2269,6 +2275,10 @@ const App = () => {
   const [key, setKey]           = useState(0);
   const prevRef                 = useRef('onboard');
 
+  /* Shared meal logging state — lifted so Home + Track stay in sync */
+  const [mealDone, setMealDone] = useState({ 0: true });
+  const [mealLate, setMealLate] = useState({});
+
   const navigate = (screen) => {
     const prev = prevRef.current;
     const prevIdx = SCREEN_ORDER.indexOf(prev);
@@ -2311,7 +2321,7 @@ const App = () => {
           style={{ display:'flex', flexDirection:'column', flex:1, overflow:'hidden' }}>
           {active === 'onboard'
             ? <Onboard onComplete={goHome}/>
-            : <Comp navigate={navigate}/>}
+            : <Comp navigate={navigate} mealDone={mealDone} setMealDone={setMealDone} mealLate={mealLate} setMealLate={setMealLate}/>}
         </div>
       </Phone>
     </Fragment>
