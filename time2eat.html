@@ -49,6 +49,18 @@
     60%  { transform: scale(1.04); opacity: 1; }
     100% { transform: scale(1);    opacity: 1; }
   }
+  @keyframes notifDrop {
+    0%   { transform: translateY(-120px); opacity: 0; }
+    60%  { transform: translateY(10px);   opacity: 1; }
+    80%  { transform: translateY(-4px);   opacity: 1; }
+    100% { transform: translateY(0);      opacity: 1; }
+  }
+  @keyframes notifSwipeUp {
+    0%   { transform: translateY(0);      opacity: 1; }
+    100% { transform: translateY(-140%);  opacity: 0; }
+  }
+  .notif-drop     { animation: notifDrop    0.60s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .notif-swipe-up { animation: notifSwipeUp 0.38s cubic-bezier(0.4,0,1,1)    forwards; }
   @keyframes navPop {
     0%   { transform: translateY(0); }
     40%  { transform: translateY(-5px); }
@@ -57,17 +69,21 @@
 
   .screen-slide-right { animation: slideInRight 0.32s cubic-bezier(0.22,1,0.36,1) forwards; }
   .screen-slide-left  { animation: slideInLeft  0.32s cubic-bezier(0.22,1,0.36,1) forwards; }
-  .screen-fade        { animation: fadeIn       0.28s ease-out forwards; }
+  .screen-fade        { animation: fadeIn       0.55s ease-out forwards; }
+  @keyframes slideInFromBottom { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  @keyframes slideOutToBottom  { from { transform: translateY(0); }    to { transform: translateY(100%); } }
+  .screen-slide-up   { animation: slideInFromBottom 0.42s cubic-bezier(0.22,1,0.36,1) forwards; }
+  .screen-slide-down { animation: slideOutToBottom  0.38s cubic-bezier(0.4,0,0.6,1)   forwards; }
   .slide-in           { animation: slideDown    0.35s ease-out forwards; }
 
   /* ── Staggered content fade-up ── */
-  .anim-item { animation: slideInUp 0.38s cubic-bezier(0.22,1,0.36,1) both; }
-  .anim-item:nth-child(1) { animation-delay: 0.04s; }
-  .anim-item:nth-child(2) { animation-delay: 0.09s; }
-  .anim-item:nth-child(3) { animation-delay: 0.14s; }
-  .anim-item:nth-child(4) { animation-delay: 0.19s; }
-  .anim-item:nth-child(5) { animation-delay: 0.24s; }
-  .anim-item:nth-child(6) { animation-delay: 0.29s; }
+  .anim-item { animation: slideInUp 0.62s cubic-bezier(0.22,1,0.36,1) both; }
+  .anim-item:nth-child(1) { animation-delay: 0.07s; }
+  .anim-item:nth-child(2) { animation-delay: 0.16s; }
+  .anim-item:nth-child(3) { animation-delay: 0.25s; }
+  .anim-item:nth-child(4) { animation-delay: 0.34s; }
+  .anim-item:nth-child(5) { animation-delay: 0.43s; }
+  .anim-item:nth-child(6) { animation-delay: 0.52s; }
 
   /* ── Button press feel ── */
   button { font-family: 'Poppins', sans-serif; transition: transform 0.1s, opacity 0.1s; }
@@ -86,6 +102,69 @@
 
 <script type="text/babel">
 const { useState, useEffect, useRef, Fragment } = React;
+
+/* ─── WIB live clock (UTC+7) ─── */
+function getWIBDate() {
+  /* Reliable: parse a Jakarta locale string into a Date whose .getHours() etc. = WIB */
+  const now = new Date();
+  return new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Jakarta' }));
+}
+
+function useWIBTime() {
+  const make = () => {
+    const wib = getWIBDate();
+    const h = wib.getHours(), m = wib.getMinutes();
+    const hh = String(h).padStart(2,'0');
+    const mm = String(m).padStart(2,'0');
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    return {
+      short: `${hh}:${mm}`,
+      full:  `${days[wib.getDay()]}, ${wib.getDate()} ${months[wib.getMonth()]}`,
+      h, m,
+    };
+  };
+  const [time, setTime] = useState(make);
+  useEffect(() => {
+    const id = setInterval(() => setTime(make()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return time;
+}
+
+/* ─── Notification sound — iOS Tri-tone style ─── */
+function playNotificationSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const master = ctx.createGain();
+    master.gain.value = 0.45;
+    master.connect(ctx.destination);
+
+    const note = (freq, start, dur) => {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(master);
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.8, start + 0.015);
+      gain.gain.setValueAtTime(0.8, start + dur * 0.6);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + dur);
+      osc.start(start);
+      osc.stop(start + dur + 0.01);
+    };
+
+    /* Two-burst pattern: tri-tone up, short pause, tri-tone up again */
+    const t = ctx.currentTime;
+    note(880,  t,        0.12);  // A5
+    note(1108, t + 0.13, 0.12);  // C#6
+    note(1318, t + 0.26, 0.18);  // E6
+    note(880,  t + 0.55, 0.12);
+    note(1108, t + 0.68, 0.12);
+    note(1318, t + 0.81, 0.22);
+  } catch(e) {}
+}
 
 /* ─── Design tokens ─── */
 const C = {
@@ -184,10 +263,11 @@ const Ic = ({ n, size = 20, color = C.text, sw = 1.5 }) => (
 /* ─── Status Bar ─── */
 const StatusBar = ({ dark = false }) => {
   const ic = dark ? 'rgba(255,255,255,0.85)' : C.text;
+  const { short } = useWIBTime();
   return (
     <div style={{ height:44, display:'flex', alignItems:'center',
       justifyContent:'space-between', padding:'0 22px', flexShrink:0 }}>
-      <span style={{ fontSize:15, fontWeight:600, color:ic, letterSpacing:-.3 }}>9:41</span>
+      <span style={{ fontSize:15, fontWeight:600, color:ic, letterSpacing:-.3 }}>{short}</span>
       <div style={{ display:'flex', gap:5, alignItems:'center' }}>
         {/* Signal */}
         <svg width="17" height="12" viewBox="0 0 17 12">
@@ -262,25 +342,28 @@ const Logo = ({ size = 28 }) => (
 const Detect = ({ navigate }) => {
   const HH = 48;
   const S  = 7;
-  const [packed, setPacked]   = useState(false);
-  const [notify, setNotify]   = useState(false);
+  const [tab, setTab]     = useState('today'); // 'today' | 'tomorrow'
+  const [notify, setNotify] = useState(false);
 
-  const togglePacked = () => {
-    const next = !packed;
-    setPacked(next);
-    if (next) { setNotify(true); setTimeout(() => setNotify(false), 4000); }
+  const switchTab = (t) => {
+    setTab(t);
+    if (t === 'tomorrow') {
+      playNotificationSound();
+      setNotify(true);
+      setTimeout(() => setNotify(false), 4000);
+    }
   };
 
   const top = (h, m = 0) => (h - S + m / 60) * HH;
   const ht  = (dh, dm = 0) => (dh + dm / 60) * HH;
 
-  const events = [
+  const todayEvents = [
     { label:'Microeconomics Lecture', time:'09:00 · 11:00', sh:9,  sm:0,  eh:11, em:0  },
     { label:'Organizational Meeting', time:'13:00 · 15:00', sh:13, sm:0,  eh:15, em:0  },
     { label:'Research Methods',       time:'15:30 · 17:00', sh:15, sm:30, eh:17, em:0  },
   ];
 
-  const packedEvents = [
+  const tomorrowEvents = [
     { label:'Morning Lecture',        time:'07:30 · 09:00', sh:7,  sm:30, eh:9,  em:0  },
     { label:'Microeconomics Lecture', time:'09:00 · 11:00', sh:9,  sm:0,  eh:11, em:0  },
     { label:'Study Group',            time:'11:00 · 13:00', sh:11, sm:0,  eh:13, em:0  },
@@ -289,82 +372,80 @@ const Detect = ({ navigate }) => {
     { label:'Lab Session',            time:'17:00 · 19:00', sh:17, sm:0,  eh:19, em:0  },
   ];
 
-  const scheduledMeals = [
+  const todayMeals = [
     { label:'Breakfast', time:'07:00 · 07:30', sh:7,  sm:0, eh:7,  em:30 },
     { label:'Lunch',     time:'11:00 · 11:30', sh:11, sm:0, eh:11, em:30 },
     { label:'Dinner',    time:'17:00 · 17:45', sh:17, sm:0, eh:17, em:45 },
   ];
 
-  // Tight windows squeezed into the packed day
-  const packedMeals = [
+  const tomorrowMeals = [
     { label:'Breakfast', time:'07:00 · 07:30', sh:7,  sm:0,  eh:7,  em:30, tight:false },
     { label:'Lunch',     time:'11:00 · 11:15', sh:11, sm:0,  eh:11, em:15, tight:true  },
     { label:'Dinner',    time:'19:00 · 19:30', sh:19, sm:0,  eh:19, em:30, tight:false },
   ];
 
-  const hours = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
-  const activeEvents = packed ? packedEvents : events;
-  const activeMeals  = packed ? packedMeals  : scheduledMeals;
+  const hours        = [7,8,9,10,11,12,13,14,15,16,17,18,19,20,21];
+  const isTomorrow   = tab === 'tomorrow';
+  const activeEvents = isTomorrow ? tomorrowEvents : todayEvents;
+  const activeMeals  = isTomorrow ? tomorrowMeals  : todayMeals;
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1, background:C.bg, overflow:'hidden', position:'relative' }}>
       <StatusBar/>
 
-      {/* Packed day notification popup */}
+      {/* Header */}
+      <div style={{ padding:'0 20px 12px', flexShrink:0 }}>
+        {/* Title */}
+        <div style={{ fontSize:22, fontWeight:800, color:C.text, marginBottom:2 }}>
+          Your Meal Schedule
+        </div>
+        <div style={{ fontSize:13, color: isTomorrow ? C.error : C.sec, marginBottom:12 }}>
+          {isTomorrow ? 'Busy schedule detected, meals adjusted' : 'Here are your meals for today'}
+        </div>
+        {/* Full-width segmented tab switcher */}
+        <div style={{ display:'flex', background:'#EFEFEF', borderRadius:12, padding:3, gap:3 }}>
+          {[{key:'today', label:'Today'}, {key:'tomorrow', label:'Tomorrow'}].map(({ key, label }) => (
+            <div key={key} onClick={() => switchTab(key)} style={{
+              flex:1, textAlign:'center',
+              padding:'8px 0', borderRadius:10, cursor:'pointer',
+              fontSize:13, fontWeight:600,
+              background: tab === key ? 'white' : 'transparent',
+              color:       tab === key ? C.text  : C.sec,
+              boxShadow:   tab === key ? '0 1px 4px rgba(0,0,0,0.10)' : 'none',
+              transition:'all .18s',
+            }}>{label}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* iOS notification popup — Tomorrow packed day */}
       {notify && (
         <div className="slide-in" style={{
-          position:'absolute', top:0, left:0, right:0, zIndex:10,
-          background:'rgba(211,47,47,0.95)', padding:'13px 16px',
-          display:'flex', alignItems:'flex-start', gap:10,
-          boxShadow:'0 4px 20px rgba(211,47,47,0.35)',
+          position:'absolute', top:8, left:10, right:10, zIndex:10,
+          background:'rgba(255,255,255,0.92)',
+          backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+          borderRadius:16, padding:'10px 12px',
+          boxShadow:'0 4px 24px rgba(0,0,0,0.18)',
+          display:'flex', flexDirection:'column', gap:0,
         }}>
-          <Logo size={24}/>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
-              Packed day: we've got you covered
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:3 }}>
+            <div style={{ width:18, height:18, borderRadius:5, overflow:'hidden', flexShrink:0 }}>
+              <Logo size={18}/>
             </div>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.8)', marginTop:3, lineHeight:1.4 }}>
-              We squeezed lunch into a 15-min gap and kept dinner after 19:00. Tap "Set manually" if you'd like to adjust.
-            </div>
+            <span style={{ fontSize:11, fontWeight:600, color:'#555', flex:1,
+              textTransform:'uppercase', letterSpacing:'0.03em' }}>Time 2 Eat!</span>
+            <span style={{ fontSize:11, color:'#999' }}>now</span>
+            <div onClick={() => setNotify(false)}
+              style={{ color:'#bbb', fontSize:14, cursor:'pointer', lineHeight:1, marginLeft:6 }}>✕</div>
           </div>
-          <div onClick={() => setNotify(false)}
-            style={{ color:'rgba(255,255,255,0.7)', fontSize:16, cursor:'pointer',
-            lineHeight:1, paddingTop:1, flexShrink:0 }}>✕</div>
+          <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a', lineHeight:1.3 }}>
+            Packed day: we've got you covered
+          </div>
+          <div style={{ fontSize:12, color:'#555', marginTop:2, lineHeight:1.4 }}>
+            We squeezed lunch into a 15-min gap and kept dinner after 19:00. Tap "Set manually" to adjust.
+          </div>
         </div>
       )}
-
-      {/* App header */}
-      <div style={{ padding:'0 20px 10px', display:'flex', alignItems:'center',
-        justifyContent:'space-between', flexShrink:0 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-          <Logo size={30}/>
-          <span style={{ fontSize:17, fontWeight:700, color:C.text }}>Time 2 Eat!</span>
-        </div>
-        {/* Packed day toggle */}
-        <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-          <span style={{ fontSize:10, fontWeight:600, color: packed ? C.error : C.sec }}>
-            Packed day
-          </span>
-          <div onClick={togglePacked} style={{ cursor:'pointer',
-            width:36, height:20, borderRadius:10,
-            background: packed ? C.error : '#DDDDDD',
-            position:'relative', transition:'background .2s', flexShrink:0 }}>
-            <div style={{ width:16, height:16, borderRadius:8, background:'white',
-              position:'absolute', top:2, left: packed ? 18 : 2,
-              transition:'left .2s', boxShadow:'0 1px 3px rgba(0,0,0,0.2)' }}/>
-          </div>
-        </div>
-      </div>
-
-      {/* Greeting */}
-      <div style={{ padding:'0 20px 14px', flexShrink:0 }}>
-        <div style={{ fontSize:20, fontWeight:700, color:C.text, lineHeight:1.2 }}>
-          Good morning, Clarissa
-        </div>
-        <div style={{ fontSize:13, color: packed ? C.error : C.sec, marginTop:4 }}>
-          {packed ? 'Your schedule is packed today' : 'Here are your meals for today'}
-        </div>
-      </div>
 
       {/* Timeline — scrollable */}
       <div className="ns" style={{ flex:1, overflowY:'auto', padding:'0 20px' }}>
@@ -432,11 +513,11 @@ const Detect = ({ navigate }) => {
 
       {/* CTA card */}
       <div style={{ padding:'8px 16px 12px', flexShrink:0 }}>
-        {packed ? (
+        {isTomorrow ? (
           <div style={{ background:'rgba(240,165,0,0.07)', borderRadius:16, padding:'14px 16px',
             boxShadow:'0 2px 8px rgba(0,0,0,0.07)', border:`1px solid rgba(240,165,0,0.25)` }}>
             <div style={{ fontSize:13, fontWeight:700, color:'#B87A00', marginBottom:4 }}>
-              Packed day: we found tight windows
+              Tight windows found for tomorrow
             </div>
             <div style={{ fontSize:11, color:C.sec, marginBottom:12, lineHeight:1.5 }}>
               Lunch is squeezed into 11:00 · 11:15 between classes. Short, but better than skipping. Dinner is free after 19:00.
@@ -650,7 +731,25 @@ const Schedule = ({ navigate }) => {
 /* ════════════════════════════════════════
    SCREEN 3 — REMIND
    ════════════════════════════════════════ */
-const Remind = ({ navigate }) => (
+const Remind = ({ navigate }) => {
+  useEffect(() => { playNotificationSound(); }, []);
+  const [notifClass, setNotifClass] = useState('notif-drop');
+  const { short: wibShort, full: wibFull, h, m } = useWIBTime();
+  const currentMeal = getCurrentMeal();
+
+  /* Date color changes based on meal window status */
+  const nowMin = h * 60 + m;
+  const windowOpen  = MEAL_WINDOWS.some(mw => nowMin >= mw.sh * 60 + mw.sm && nowMin <= mw.eh * 60 + mw.em);
+  const allMealsDone = nowMin > MEAL_WINDOWS[2].eh * 60 + MEAL_WINDOWS[2].em;
+  const dateColor = windowOpen ? C.primary : allMealsDone ? '#4CAF50' : 'rgba(255,255,255,0.52)';
+
+  const dismiss = (dest) => {
+    setNotifClass('notif-swipe-up');
+    playNotificationSound();
+    setTimeout(() => navigate(dest), 380);
+  };
+
+  return (
   <div style={{ display:'flex', flexDirection:'column', flex:1,
     background:'#1A1A1A', overflow:'hidden' }}>
     <StatusBar dark/>
@@ -659,61 +758,72 @@ const Remind = ({ navigate }) => (
     <div style={{ textAlign:'center', padding:'40px 20px 30px', flexShrink:0 }}>
       <div style={{ fontSize:72, fontWeight:200, color:'white',
         letterSpacing:-4, lineHeight:1 }}>
-        12:58
+        {wibShort}
       </div>
-      <div style={{ fontSize:15, color:'rgba(255,255,255,0.52)',
-        marginTop:10, fontWeight:400 }}>
-        Friday, 30 May
+      <div style={{ fontSize:15, color: dateColor,
+        marginTop:10, fontWeight:400, transition:'color 0.4s' }}>
+        {wibFull}
       </div>
     </div>
 
-    {/* Notification card */}
-    <div style={{ margin:'0 16px', background:'rgba(255,255,255,0.97)',
-      borderRadius:20, padding:'16px',
-      boxShadow:'0 8px 40px rgba(0,0,0,0.5)', flexShrink:0 }}>
+    {/* Notification card — iOS lock screen style */}
+    <div className={notifClass} style={{ margin:'0 16px', background:'rgba(255,255,255,0.88)',
+      backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)',
+      borderRadius:20, padding:'14px 16px',
+      boxShadow:'0 8px 40px rgba(0,0,0,0.38)', flexShrink:0 }}>
 
-      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-        <Logo size={32}/>
-        <div style={{ flex:1 }}>
-          <div style={{ fontSize:13, fontWeight:600, color:C.text }}>Time 2 Eat!</div>
+      {/* iOS notification header */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+        <div style={{ width:36, height:36, borderRadius:9, overflow:'hidden', flexShrink:0,
+          boxShadow:'0 1px 4px rgba(0,0,0,0.15)' }}>
+          <Logo size={36}/>
         </div>
-        <span style={{ fontSize:11, color:C.sec }}>now</span>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:12, fontWeight:600, color:'#555',
+            textTransform:'uppercase', letterSpacing:'0.04em', lineHeight:1.2 }}>
+            Time 2 Eat!
+          </div>
+        </div>
+        <span style={{ fontSize:12, color:'#999' }}>now</span>
       </div>
 
-      <div style={{ fontSize:16, fontWeight:700, color:C.text, marginBottom:5,
+      {/* Divider */}
+      <div style={{ height:1, background:'rgba(0,0,0,0.06)', marginBottom:10 }}/>
+
+      <div style={{ fontSize:15, fontWeight:700, color:'#1a1a1a', marginBottom:4,
         lineHeight:1.3 }}>
-        Lunch window starts now
+        {currentMeal.type} window starts now
       </div>
-      <div style={{ fontSize:13, color:C.sec, marginBottom:12, lineHeight:1.5 }}>
-        Your meeting just ended, time to eat
+      <div style={{ fontSize:13, color:'#555', marginBottom:12, lineHeight:1.5 }}>
+        Time for {currentMeal.type.toLowerCase()} · {currentMeal.time}
       </div>
 
       {/* Nutrition tip */}
-      <div style={{ background:'rgba(255,140,0,0.07)', borderRadius:10,
+      <div style={{ background:'rgba(255,140,0,0.08)', borderRadius:10,
         padding:'9px 12px', marginBottom:14 }}>
         <div style={{ fontSize:10, fontWeight:700, color:C.primary,
           textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:4 }}>
           Quick tip
         </div>
-        <div style={{ fontSize:11, color:'#555', lineHeight:1.6 }}>
+        <div style={{ fontSize:11, color:'#444', lineHeight:1.6 }}>
           ✓ Light protein like chicken or eggs with vegetables
         </div>
-        <div style={{ fontSize:11, color:'#999', lineHeight:1.6 }}>
+        <div style={{ fontSize:11, color:'#888', lineHeight:1.6 }}>
           ✕ Avoid heavy carbs and fried food this late
         </div>
       </div>
 
-      <div style={{ display:'flex', gap:8 }}>
-        <button onClick={() => navigate('track')}
-          style={{ flex:1, height:44, borderRadius:12,
-          background:C.primary, border:'none', color:'white',
-          fontSize:14, fontWeight:600, cursor:'pointer' }}>
+      {/* iOS-style action buttons with divider */}
+      <div style={{ display:'flex', borderTop:'1px solid rgba(0,0,0,0.08)', marginTop:4 }}>
+        <button onClick={() => dismiss('home')}
+          style={{ flex:1, height:44, background:'transparent', border:'none',
+          borderRight:'1px solid rgba(0,0,0,0.08)',
+          color:C.primary, fontSize:14, fontWeight:600, cursor:'pointer', borderRadius:0 }}>
           Eat Now
         </button>
-        <button onClick={() => navigate('track')}
-          style={{ flex:1, height:44, borderRadius:12,
-          background:'transparent', border:'1.5px solid #DDD', color:'#888',
-          fontSize:14, fontWeight:500, cursor:'pointer' }}>
+        <button onClick={() => dismiss('home')}
+          style={{ flex:1, height:44, background:'transparent', border:'none',
+          color:'#555', fontSize:14, fontWeight:400, cursor:'pointer', borderRadius:0 }}>
           Remind Me Later
         </button>
       </div>
@@ -726,7 +836,8 @@ const Remind = ({ navigate }) => (
         background:'rgba(255,255,255,0.3)' }}/>
     </div>
   </div>
-);
+  );
+};
 
 /* ════════════════════════════════════════
    SCREEN 4 — TRACK
@@ -772,47 +883,51 @@ const Track = ({ navigate }) => {
 
   const [view, setView]       = React.useState('week');
   const [banner, setBanner]   = React.useState(true);
+  const trackMeal = getCurrentMeal();
+
+  React.useEffect(() => { playNotificationSound(); }, []);
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1,
       background:C.bg, overflow:'hidden', position:'relative' }}>
 
-      {/* ── In-app notification banner ── */}
+      {/* ── In-app notification banner — iOS banner style ── */}
       {banner && (
         <div className="slide-in" style={{
-          position:'absolute', top:0, left:0, right:0, zIndex:10,
-          background:C.primary, padding:'12px 14px',
+          position:'absolute', top:8, left:10, right:10, zIndex:10,
+          background:'rgba(255,255,255,0.92)',
+          backdropFilter:'blur(20px)', WebkitBackdropFilter:'blur(20px)',
+          borderRadius:16,
+          padding:'10px 12px',
+          boxShadow:'0 4px 24px rgba(0,0,0,0.18)',
           display:'flex', alignItems:'center', gap:10,
-          boxShadow:'0 4px 20px rgba(255,140,0,0.35)',
         }}>
-          <Logo size={26}/>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:11, color:'rgba(255,255,255,0.72)', lineHeight:1.3 }}>
+          <div style={{ width:36, height:36, borderRadius:9, overflow:'hidden', flexShrink:0 }}>
+            <Logo size={36}/>
+          </div>
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:'#888',
+              textTransform:'uppercase', letterSpacing:'0.03em', lineHeight:1.2 }}>
               Time 2 Eat!
             </div>
-            <div style={{ fontSize:12, fontWeight:700, color:'white', lineHeight:1.3 }}>
-              Lunch window starts now
+            <div style={{ fontSize:13, fontWeight:700, color:'#1a1a1a', lineHeight:1.3 }}>
+              {trackMeal.type} window starts now
             </div>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.72)', marginTop:2 }}>
-              Your meeting just ended, time to eat
-            </div>
-            <div style={{ fontSize:10, color:'rgba(255,255,255,0.9)', marginTop:4,
-              background:'rgba(255,255,255,0.15)', borderRadius:6, padding:'3px 7px',
-              display:'inline-block' }}>
-              ✓ Try light protein · ✕ Skip heavy carbs
+            <div style={{ fontSize:11, color:'#555', marginTop:1, lineHeight:1.3 }}>
+              Time for {trackMeal.type.toLowerCase()} · {trackMeal.time}
             </div>
           </div>
-          <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+          <div style={{ display:'flex', flexDirection:'column', gap:5, flexShrink:0 }}>
             <button onClick={() => setBanner(false)}
-              style={{ background:'rgba(255,255,255,0.22)', color:'white',
-              border:'none', borderRadius:8, padding:'6px 10px',
+              style={{ background:C.primary, color:'white',
+              border:'none', borderRadius:8, padding:'5px 10px',
               fontSize:11, fontWeight:600, cursor:'pointer' }}>
               Eat Now
             </button>
             <button onClick={() => setBanner(false)}
-              style={{ background:'transparent', color:'rgba(255,255,255,0.85)',
-              border:'1px solid rgba(255,255,255,0.3)', borderRadius:8,
-              padding:'6px 10px', fontSize:11, fontWeight:500, cursor:'pointer' }}>
+              style={{ background:'rgba(0,0,0,0.06)', color:'#555',
+              border:'none', borderRadius:8, padding:'5px 10px',
+              fontSize:11, fontWeight:500, cursor:'pointer' }}>
               Later
             </button>
           </div>
@@ -1420,23 +1535,58 @@ const Onboard = ({ onComplete }) => {
   );
 };
 
+/* ─── Shared meal windows ─── */
+const MEAL_WINDOWS = [
+  { type:'Breakfast', sh:7,  sm:0,  eh:7,  em:30, time:'07:00 · 07:30' },
+  { type:'Lunch',     sh:12, sm:30, eh:13, em:0,  time:'12:30 · 13:00' },
+  { type:'Dinner',    sh:18, sm:30, eh:19, em:0,  time:'18:30 · 19:00' },
+];
+
+/* Returns the current or next upcoming meal based on WIB time */
+function getCurrentMeal() {
+  const wib = getWIBDate();
+  const nowMin = wib.getHours() * 60 + wib.getMinutes();
+  // Window currently open?
+  const open = MEAL_WINDOWS.find(m => nowMin >= m.sh * 60 + m.sm && nowMin <= m.eh * 60 + m.em);
+  if (open) return open;
+  // Next upcoming
+  const next = MEAL_WINDOWS.find(m => m.sh * 60 + m.sm > nowMin);
+  return next || MEAL_WINDOWS[0]; // fallback to Breakfast (next day)
+}
+
 /* ════════════════════════════════════════
    HOME DASHBOARD
    ════════════════════════════════════════ */
+
 const Home = ({ navigate }) => {
-  /* Live countdown to next meal (12:30) */
+  /* Live WIB clock + countdown */
+  const wib = useWIBTime();
   const [secs, setSecs] = useState(0);
+  const [nextMealIdx, setNextMealIdx] = useState(0);
+
   React.useEffect(() => {
     const calc = () => {
-      const now = new Date(), nxt = new Date();
-      nxt.setHours(12, 30, 0, 0);
-      if (now >= nxt) nxt.setDate(nxt.getDate() + 1);
-      setSecs(Math.max(0, Math.floor((nxt - now) / 1000)));
+      const w = getWIBDate();
+      const nowMin = w.getHours() * 60 + w.getMinutes();
+
+      /* Find the next meal that hasn't started yet */
+      let idx = MEAL_WINDOWS.findIndex(m => (m.sh * 60 + m.sm) > nowMin);
+      if (idx === -1) idx = 0; // past all meals → tomorrow's breakfast
+      setNextMealIdx(idx);
+
+      /* Countdown to that meal's start (or 0 if window is already open) */
+      const meal = MEAL_WINDOWS[idx];
+      const targetMin = meal.sh * 60 + meal.sm;
+      let diffMin = targetMin - nowMin;
+      if (diffMin < 0) diffMin += 24 * 60; // wrap to next day
+      const diffSec = diffMin * 60 - w.getSeconds();
+      setSecs(Math.max(0, diffSec));
     };
     calc();
     const id = setInterval(calc, 1000);
     return () => clearInterval(id);
   }, []);
+
   const pad = n => String(n).padStart(2, '0');
   const cdH = pad(Math.floor(secs / 3600));
   const cdM = pad(Math.floor((secs % 3600) / 60));
@@ -1450,20 +1600,26 @@ const Home = ({ navigate }) => {
   const [late, setLate]     = useState({});
   const toggle = i => setDone(p => ({ ...p, [i]: !p[i] }));
 
-  /* Dynamic greeting */
-  const hr = new Date().getHours();
-  const greeting = hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  /* Dynamic greeting based on WIB hour */
+  const greeting = wib.h < 12 ? 'Good morning' : wib.h < 17 ? 'Good afternoon' : 'Good evening';
 
-  const meals = [
-    { type:'Breakfast', time:'07:00 · 07:30', base:'completed' },
-    { type:'Lunch',     time:'12:30 · 13:00', base:'missed'    }, // window has closed
-    { type:'Dinner',    time:'18:30 · 19:00', base:'scheduled' },
-  ];
+  /* Dynamic meal statuses based on WIB time */
+  const nowMin = wib.h * 60 + wib.m;
+  const meals = MEAL_WINDOWS.map(m => {
+    const startMin = m.sh * 60 + m.sm;
+    const endMin   = m.eh * 60 + m.em;
+    let base;
+    if (nowMin < startMin)     base = 'scheduled'; // not started yet
+    else if (nowMin <= endMin) base = 'open';       // window is open — user decides
+    else                       base = 'missed';     // window has passed
+    return { type: m.type, time: m.time, base };
+  });
 
   const badgeCfg = s => ({
     completed: { bg:'rgba(46,125,50,0.09)',  color:'#2E7D32',  label:'On track'     },
     late:      { bg:'rgba(240,165,0,0.12)', color:'#F0A500',  label:'Slightly off'  },
     missed:    { bg:'rgba(211,47,47,0.08)', color:C.error,    label:'Missed'        },
+    open:      { bg:'rgba(255,140,0,0.11)', color:C.primary,  label:'Window open'   },
     upcoming:  { bg:'rgba(255,140,0,0.11)', color:C.primary,  label:'Upcoming'      },
     scheduled: { bg:'#F3F3F3',             color:'#999999',   label:'Scheduled'    },
   }[s]);
@@ -1522,7 +1678,7 @@ const Home = ({ navigate }) => {
             height:3, background:C.primary }}/>
           <div style={{ fontSize:10, fontWeight:600, color:C.sec,
             letterSpacing:'0.09em', textTransform:'uppercase', marginBottom:10 }}>
-            Time until Lunch
+            Time until {MEAL_WINDOWS[nextMealIdx].type}
           </div>
           <div style={{ fontSize:46, fontWeight:800, color:C.primary,
             letterSpacing:-2, lineHeight:1, fontVariantNumeric:'tabular-nums' }}>
@@ -1533,7 +1689,7 @@ const Home = ({ navigate }) => {
             {cdS}
           </div>
           <div style={{ fontSize:12, color:C.sec, marginTop:9 }}>
-            Lunch window · 12:30 to 13:00
+            {MEAL_WINDOWS[nextMealIdx].type} window · {MEAL_WINDOWS[nextMealIdx].time.replace(' · ', ' to ')}
           </div>
         </div>
 
@@ -1546,6 +1702,7 @@ const Home = ({ navigate }) => {
           const isDone    = !!done[i];
           const isLate2   = !!late[i];
           const isMissed  = meal.base === 'missed' && !isDone && !isLate2;
+          const isOpen    = meal.base === 'open' && !isDone && !isLate2;
           const status    = isDone ? 'completed' : isLate2 ? 'late' : meal.base;
           const { bg, color, label } = badgeCfg(status);
 
@@ -1565,11 +1722,11 @@ const Home = ({ navigate }) => {
               {/* Main card */}
               <div style={{
                 background: isMissed ? 'white' : C.cardBg,
-                borderRadius: isMissed ? '14px 14px 0 0' : 14,
+                borderRadius: (isMissed || isOpen) ? '14px 14px 0 0' : 14,
                 padding:'13px 14px', display:'flex', alignItems:'center', gap:12,
                 boxShadow:'0 1px 6px rgba(0,0,0,0.06)',
-                border: isMissed ? `1px solid rgba(211,47,47,0.15)` : 'none',
-                borderBottom: isMissed ? 'none' : undefined,
+                border: isMissed ? `1px solid rgba(211,47,47,0.15)` : isOpen ? `1px solid rgba(255,140,0,0.2)` : 'none',
+                borderBottom: (isMissed || isOpen) ? 'none' : undefined,
               }}>
                 {/* Meal icon */}
                 <div style={{ width:40, height:40, borderRadius:11, flexShrink:0,
@@ -1629,6 +1786,32 @@ const Home = ({ navigate }) => {
                   </button>
                 </div>
               )}
+
+              {/* Meal tip — shown while window is open and not yet logged */}
+              {isOpen && (() => {
+                const tips = {
+                  Breakfast: { food:'Eggs, Greek yogurt, or oats give you steady energy', avoid:'Skip sugary cereals and juice — they spike and crash fast', color:C.primary, bg:'rgba(255,140,0,0.06)' },
+                  Lunch:     { food:'Light protein like chicken or tofu with vegetables', avoid:'Avoid heavy carbs and fried food — digestion slows after', color:C.primary, bg:'rgba(255,140,0,0.06)' },
+                  Dinner:    { food:'Lean protein and veggies — easy on the stomach before bed', avoid:'Avoid high carbs, sugar, and caffeine this late', color:'#1565C0', bg:'rgba(21,101,192,0.06)' },
+                };
+                const t = tips[meal.type] || tips.Lunch;
+                return (
+                  <div style={{ background:t.bg, borderRadius:'0 0 14px 14px',
+                    padding:'11px 14px 13px',
+                    border:`1px solid rgba(255,140,0,0.2)`, borderTop:'none' }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:t.color,
+                      textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:5 }}>
+                      {meal.type} tip
+                    </div>
+                    <div style={{ fontSize:11, color:'#444', lineHeight:1.6, marginBottom:3 }}>
+                      ✓ {t.food}
+                    </div>
+                    <div style={{ fontSize:11, color:'#888', lineHeight:1.6 }}>
+                      ✕ {t.avoid}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Nutrition tip — shown after "I ate, just late" */}
               {isLate2 && (() => {
@@ -1764,6 +1947,64 @@ const Settings = ({ navigate }) => {
   const [notifOn,   setNotifOn  ] = useState(true);
   const [autoSched, setAutoSched] = useState(true);
 
+  /* ── Editable values ── */
+  const [mealTimes, setMealTimes] = useState({
+    breakfast: { start:'06:00', end:'10:00' },
+    lunch:     { start:'11:00', end:'14:00' },
+    dinner:    { start:'17:00', end:'20:00' },
+  });
+  const [windowDur,      setWindowDur     ] = useState(30);
+  const [reminderTiming, setReminderTiming] = useState(15);
+
+  /* ── Sheet state ── */
+  const [sheet,    setSheet   ] = useState(null); // 'breakfast'|'lunch'|'dinner'|'window'|'reminder'
+  const [draft,    setDraft   ] = useState({});
+
+  const openMeal = (key) => {
+    setDraft({ ...mealTimes[key] });
+    setSheet(key);
+  };
+  const saveMeal = () => {
+    setMealTimes(p => ({ ...p, [sheet]: draft }));
+    setSheet(null);
+  };
+  const openOption = (key) => {
+    setDraft({ value: key === 'window' ? windowDur : reminderTiming });
+    setSheet(key);
+  };
+  const saveOption = () => {
+    if (sheet === 'window')   setWindowDur(draft.value);
+    if (sheet === 'reminder') setReminderTiming(draft.value);
+    setSheet(null);
+  };
+
+  const fmt = ({ start, end }) => {
+    const f = t => { const [h, m] = t.split(':'); const hr = +h; return `${hr > 12 ? hr-12 : hr || 12}:${m} ${hr >= 12 ? 'PM' : 'AM'}`; };
+    return `${f(start)} · ${f(end)}`;
+  };
+
+  const TimeInput = ({ label, value, onChange }) => (
+    <div style={{ flex:1 }}>
+      <div style={{ fontSize:11, color:C.sec, marginBottom:6, fontWeight:600 }}>{label}</div>
+      <input type="time" value={value} onChange={e => onChange(e.target.value)}
+        style={{ width:'100%', height:44, borderRadius:10, border:`1.5px solid ${C.border}`,
+          fontSize:16, fontWeight:600, color:C.text, textAlign:'center',
+          background:'white', outline:'none', boxSizing:'border-box', fontFamily:'inherit' }}/>
+    </div>
+  );
+
+  const Chip = ({ label, selected, onSelect }) => (
+    <div onClick={onSelect} style={{ flex:1, height:44, borderRadius:10, cursor:'pointer',
+      display:'flex', alignItems:'center', justifyContent:'center',
+      border:`1.5px solid ${selected ? C.primary : C.border}`,
+      background: selected ? 'rgba(255,140,0,0.08)' : 'white',
+      fontSize:13, fontWeight:600,
+      color: selected ? C.primary : C.sec,
+      transition:'all .15s' }}>
+      {label}
+    </div>
+  );
+
   const SectionLabel = ({ title }) => (
     <div style={{ fontSize:11, fontWeight:700, color:C.sec,
       letterSpacing:'0.08em', textTransform:'uppercase',
@@ -1826,7 +2067,7 @@ const Settings = ({ navigate }) => {
 
   return (
     <div style={{ display:'flex', flexDirection:'column', flex:1,
-      background:C.bg, overflow:'hidden' }}>
+      background:C.bg, overflow:'hidden', position:'relative' }}>
       <StatusBar/>
 
       {/* Header */}
@@ -1866,12 +2107,12 @@ const Settings = ({ navigate }) => {
         {/* ── Meal Preferences ── */}
         <SectionLabel title="Meal Preferences"/>
         <Card>
-          <Row icon="clock" label="Breakfast" value="6:00 · 10:00 AM"   onClick={() => {}}/>
-          <Row icon="clock" label="Lunch"     value="11:00 AM · 2:00 PM" onClick={() => {}}/>
-          <Row icon="clock" label="Dinner"    value="5:00 · 8:00 PM"   onClick={() => {}}/>
-          <Row icon="settings" label="Window Duration" value="30 min"
+          <Row icon="clock" label="Breakfast" value={fmt(mealTimes.breakfast)} onClick={() => openMeal('breakfast')}/>
+          <Row icon="clock" label="Lunch"     value={fmt(mealTimes.lunch)}     onClick={() => openMeal('lunch')}/>
+          <Row icon="clock" label="Dinner"    value={fmt(mealTimes.dinner)}    onClick={() => openMeal('dinner')}/>
+          <Row icon="settings" label="Window Duration" value={`${windowDur} min`}
             sub="Preferred eating time"
-            onClick={() => {}} last/>
+            onClick={() => openOption('window')} last/>
         </Card>
 
         {/* ── Calendar ── */}
@@ -1890,8 +2131,8 @@ const Settings = ({ navigate }) => {
           <Row icon="bell"  label="Meal Reminders"
             sub="Notify me when a window opens"
             toggle={notifOn} onToggle={() => setNotifOn(!notifOn)}/>
-          <Row icon="clock" label="Reminder Timing" value="15 min before"
-            onClick={() => {}} last/>
+          <Row icon="clock" label="Reminder Timing" value={`${reminderTiming} min before`}
+            onClick={() => openOption('reminder')} last/>
         </Card>
 
         {/* ── About ── */}
@@ -1917,6 +2158,79 @@ const Settings = ({ navigate }) => {
       </div>
 
       <BottomNav active="settings" navigate={navigate}/>
+
+      {/* ── Centered modal popup ── */}
+      {sheet && (
+        <>
+          {/* Backdrop */}
+          <div onClick={() => setSheet(null)}
+            style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.45)', zIndex:20 }}/>
+
+          {/* Modal card */}
+          <div style={{
+            position:'absolute', top:'50%', left:'50%',
+            transform:'translate(-50%, -50%)',
+            zIndex:21, width:'82%',
+            background:'white', borderRadius:22,
+            padding:'24px 20px 20px',
+            boxShadow:'0 20px 60px rgba(0,0,0,0.25)' }}>
+
+            {/* Title */}
+            <div style={{ fontSize:17, fontWeight:700, color:C.text, textAlign:'center', marginBottom:20 }}>
+              { sheet === 'breakfast' ? 'Breakfast Window'
+              : sheet === 'lunch'     ? 'Lunch Window'
+              : sheet === 'dinner'    ? 'Dinner Window'
+              : sheet === 'window'    ? 'Window Duration'
+              :                         'Reminder Timing' }
+            </div>
+
+            {/* Meal time inputs */}
+            {['breakfast','lunch','dinner'].includes(sheet) && (
+              <div style={{ display:'flex', gap:12, marginBottom:20 }}>
+                <TimeInput label="Start time" value={draft.start}
+                  onChange={v => setDraft(d => ({ ...d, start:v }))}/>
+                <TimeInput label="End time"   value={draft.end}
+                  onChange={v => setDraft(d => ({ ...d, end:v }))}/>
+              </div>
+            )}
+
+            {/* Window duration chips */}
+            {sheet === 'window' && (
+              <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+                {[15, 30, 45, 60].map(v => (
+                  <Chip key={v} label={`${v} min`} selected={draft.value === v}
+                    onSelect={() => setDraft({ value:v })}/>
+                ))}
+              </div>
+            )}
+
+            {/* Reminder timing chips */}
+            {sheet === 'reminder' && (
+              <div style={{ display:'flex', gap:8, marginBottom:20 }}>
+                {[5, 10, 15, 30].map(v => (
+                  <Chip key={v} label={`${v} min`} selected={draft.value === v}
+                    onSelect={() => setDraft({ value:v })}/>
+                ))}
+              </div>
+            )}
+
+            {/* Divider + iOS-style buttons */}
+            <div style={{ borderTop:`1px solid ${C.border}`, display:'flex', marginTop:4 }}>
+              <button onClick={() => setSheet(null)}
+                style={{ flex:1, height:46, background:'transparent', border:'none',
+                borderRight:`1px solid ${C.border}`,
+                color:'#888', fontSize:15, fontWeight:400, cursor:'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={['breakfast','lunch','dinner'].includes(sheet) ? saveMeal : saveOption}
+                style={{ flex:1, height:46, background:'transparent', border:'none',
+                color:C.primary, fontSize:15, fontWeight:700, cursor:'pointer' }}>
+                Save
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -1956,7 +2270,8 @@ const App = () => {
   const prevRef                 = useRef('onboard');
 
   const navigate = (screen) => {
-    const prevIdx = SCREEN_ORDER.indexOf(prevRef.current);
+    const prev = prevRef.current;
+    const prevIdx = SCREEN_ORDER.indexOf(prev);
     const nextIdx = SCREEN_ORDER.indexOf(screen);
     const cls = nextIdx >= prevIdx ? 'screen-slide-right' : 'screen-slide-left';
     prevRef.current = screen;
