@@ -1284,10 +1284,12 @@ const Onboard = ({ onComplete }) => {
           letterSpacing:-.5, marginTop:20, marginBottom:10 }}>
           Time 2 Eat!
         </div>
-        <div style={{ fontSize:15, color:C.sec, lineHeight:1.65,
-          marginBottom:48, maxWidth:230 }}>
+        <div style={{ fontSize:15, color:C.sec, lineHeight:1.65, maxWidth:230 }}>
           Eat on time.<br/>Perform at your best.
         </div>
+      </div>
+      {/* Button pinned to bottom */}
+      <div style={{ padding:'0 32px 40px', flexShrink:0 }}>
         <button onClick={() => setStep(2)} style={{
           width:'100%', height:52, background:C.primary, color:'white',
           border:'none', borderRadius:12, fontSize:16, fontWeight:600,
